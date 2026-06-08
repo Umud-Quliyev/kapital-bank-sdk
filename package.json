@@ -11,7 +11,8 @@
   "test:run": "vitest run",
   "dev": "tsup --watch",
   "example": "tsx examples/create-order.ts",
-  "get-order": "tsx examples/get-order.ts"
+  "get-order": "tsx examples/get-order.ts",
+  "reverse": "tsx examples/reverse.ts"
 },
   "keywords": [
     "kapital-bank",

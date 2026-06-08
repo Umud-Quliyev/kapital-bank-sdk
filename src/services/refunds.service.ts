@@ -1,33 +1,44 @@
-import axios, { AxiosInstance } from 'axios';
-import { CreateRefundRequest, RefundResponse } from '../types/refund';
-import { KapitalBankError } from '../errors/KapitalBankError';
+import axios from "axios";
+
+import { KapitalBankClient } from "../client/KapitalBankClient";
+import { ENDPOINTS } from "../constants/endpoints";
+import { KapitalBankError } from "../errors/KapitalBankError";
+import {
+  RefundRequest,
+  RefundResponse,
+} from "../types/refund";
 
 export class RefundsService {
-  constructor(private client: AxiosInstance) {}
+  constructor(
+    private readonly client: KapitalBankClient
+  ) {}
 
-  async create(data: CreateRefundRequest): Promise<RefundResponse> {
+  async refund(
+    orderId: number | string,
+    payload: RefundRequest
+  ): Promise<RefundResponse> {
     try {
-      const response = await this.client.post<RefundResponse>('/refunds', data);
-      return response.data;
-    } catch (error: any) {
-      throw new KapitalBankError(
-        error.response?.data?.message || 'Failed to create refund',
-        error.response?.data?.code,
-        error.response?.status
-      );
-    }
-  }
+      const response = await this.client
+        .getHttp()
+        .post(
+          ENDPOINTS.EXEC_TRAN(orderId),
+          {
+            tran: payload,
+          }
+        );
 
-  async get(refundId: string): Promise<RefundResponse> {
-    try {
-      const response = await this.client.get<RefundResponse>(`/refunds/${refundId}`);
       return response.data;
-    } catch (error: any) {
-      throw new KapitalBankError(
-        error.response?.data?.message || 'Failed to get refund',
-        error.response?.data?.code,
-        error.response?.status
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new KapitalBankError(
+          error.response?.data?.message ??
+            error.message,
+          error.response?.status,
+          error.response?.data
+        );
+      }
+
+      throw error;
     }
   }
 }

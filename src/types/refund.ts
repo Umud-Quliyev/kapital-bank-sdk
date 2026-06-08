@@ -1,12 +1,11 @@
-export interface CreateRefundRequest {
-  orderId: string;
-  amount: number;
-  reason?: string;
+export interface RefundRequest {
+  phase: "Single" | "Auth" | "Clearing";
+  amount: string;
+  type: "Refund";
 }
 
 export interface RefundResponse {
-  refundId: string;
-  orderId: string;
-  amount: number;
-  status: string;
+  orderId?: number;
+  status?: string;
+  approvalCode?: string;
 }

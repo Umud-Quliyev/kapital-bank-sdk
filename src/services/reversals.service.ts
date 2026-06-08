@@ -1,33 +1,45 @@
-import axios, { AxiosInstance } from 'axios';
-import { CreateReversalRequest, ReversalResponse } from '../types/reversal';
-import { KapitalBankError } from '../errors/KapitalBankError';
+import axios from "axios";
+
+import { KapitalBankClient } from "../client/KapitalBankClient";
+import { ENDPOINTS } from "../constants/endpoints";
+import { KapitalBankError } from "../errors/KapitalBankError";
+
+import {
+  ReversalRequest,
+  ReversalResponse,
+} from "../types/reversal";
 
 export class ReversalsService {
-  constructor(private client: AxiosInstance) {}
+  constructor(
+    private readonly client: KapitalBankClient
+  ) {}
 
-  async create(data: CreateReversalRequest): Promise<ReversalResponse> {
+  async reverse(
+    orderId: number | string,
+    payload: ReversalRequest
+  ): Promise<ReversalResponse> {
     try {
-      const response = await this.client.post<ReversalResponse>('/reversals', data);
-      return response.data;
-    } catch (error: any) {
-      throw new KapitalBankError(
-        error.response?.data?.message || 'Failed to create reversal',
-        error.response?.data?.code,
-        error.response?.status
-      );
-    }
-  }
+      const response = await this.client
+        .getHttp()
+        .post(
+          ENDPOINTS.EXEC_TRAN(orderId),
+          {
+            tran: payload,
+          }
+        );
 
-  async get(reversalId: string): Promise<ReversalResponse> {
-    try {
-      const response = await this.client.get<ReversalResponse>(`/reversals/${reversalId}`);
       return response.data;
-    } catch (error: any) {
-      throw new KapitalBankError(
-        error.response?.data?.message || 'Failed to get reversal',
-        error.response?.data?.code,
-        error.response?.status
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new KapitalBankError(
+          error.response?.data?.message ??
+            error.message,
+          error.response?.status,
+          error.response?.data
+        );
+      }
+
+      throw error;
     }
   }
 }

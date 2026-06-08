@@ -2,6 +2,7 @@ import axios, { AxiosInstance } from "axios";
 import { KapitalBankConfig } from "../types/config";
 import { ENVIRONMENTS } from "../constants/environments";
 
+
 export class KapitalBankClient {
   private readonly axiosInstance: AxiosInstance;
   private readonly config: Required<KapitalBankConfig>;
@@ -38,6 +39,6 @@ export class KapitalBankClient {
   }
 
   public getHttp() {
-  return this.axiosInstance;
-}
+    return this.axiosInstance;
+  }
 }
