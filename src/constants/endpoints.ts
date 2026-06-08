@@ -12,4 +12,11 @@ export const ENDPOINTS = {
     password: string
   ) =>
     `/order/${id}/set-src-token?password=${password}`,
+  
+  SET_DST_TOKEN: (
+    id: number | string,
+    password: string
+  ) =>
+    `/order/${id}/set-dst-token?password=${password}`,
+    
 } as const;
