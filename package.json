@@ -28,7 +28,7 @@
     "typescript"
   ],
   "author": "Umud Quliyev",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": {
     "axios": "^1.17.0"
   },

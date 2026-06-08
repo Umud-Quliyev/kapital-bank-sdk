@@ -10,17 +10,19 @@ npm install kapital-bank-sdk
 
 ## Features
 
-* Create Order
-* Get Order Details
-* Execute Transactions
-* Refund Transactions
-* Reverse Transactions
-* Set Source Token (Saved Cards)
-* Set Destination Token
-* Recurring Payment Support
-* Card Transfer Helper (OCT)
-* Full TypeScript Support
-* ESM & CommonJS Support
+- Create Order
+- Get Order Details
+- Execute Transactions
+- Refund Transactions
+- Reverse Transactions
+- Set Source Token (Saved Cards)
+- Set Destination Token
+- Recurring Payment Support
+- Card Transfer Helper (OCT)
+- PreAuthorization Helper
+- Clearing Helper
+- Full TypeScript Support
+- ESM & CommonJS Support
 
 ---
 
@@ -74,17 +76,6 @@ const order = await kb.createOrder({
 console.log(order);
 ```
 
-Example response:
-
-```ts
-{
-  id: 232748,
-  hppUrl: "https://txpgtst.kapitalbank.az/flex",
-  password: "1q0a1v2ypvcg0",
-  status: "Preparing"
-}
-```
-
 ---
 
 ## Get Order Details
@@ -130,30 +121,13 @@ await kb.reverse(order.id, {
 
 ---
 
-## Set Source Token (Saved Card)
+## Set Source Token
 
 ```ts
-await kb.setSourceToken(
-  order.id,
-  order.password,
-  {
-    initiationEnvKind: "Server",
-    storedId: 5125,
-  }
-);
-```
-
-Example response:
-
-```ts
-{
-  status: "Preparing",
-  srcToken: {
-    id: 144475,
-    status: "Active",
-    displayName: "416974******1778"
-  }
-}
+await kb.setSourceToken(order.id, order.password, {
+  initiationEnvKind: "Server",
+  storedId: 5125,
+});
 ```
 
 ---
@@ -161,27 +135,9 @@ Example response:
 ## Set Destination Token
 
 ```ts
-await kb.setDestinationToken(
-  order.id,
-  order.password,
-  {
-    pan: "4169741330151778",
-  }
-);
-```
-
-Example response:
-
-```ts
-{
-  status: "Preparing",
-  dstToken: {
-    id: 144494,
-    role: "Dst",
-    status: "Active",
-    displayName: "416974******1778"
-  }
-}
+await kb.setDestinationToken(order.id, order.password, {
+  pan: "4169741330151778",
+});
 ```
 
 ---
@@ -197,31 +153,38 @@ const order = await kb.createOrder({
   description: "Recurring Payment",
 });
 
-await kb.setSourceToken(
-  order.id,
-  order.password,
-  {
-    initiationEnvKind: "Server",
-    storedId: 5125,
-  }
-);
+await kb.setSourceToken(order.id, order.password, {
+  initiationEnvKind: "Server",
+  storedId: 5125,
+});
 
-await kb.executeTransaction(
-  order.id,
-  {
-    phase: "Single",
-    conditions: {
-      cofUsage: "Recurring",
-    },
-  }
-);
+await kb.executeTransaction(order.id, {
+  phase: "Single",
+  conditions: {
+    cofUsage: "Recurring",
+  },
+});
+```
+
+---
+
+## PreAuthorization
+
+```ts
+await kb.preAuthorize(order.id, "1.00");
+```
+
+---
+
+## Clearing
+
+```ts
+await kb.clear(order.id, "1.00");
 ```
 
 ---
 
 ## Card Transfer (OCT)
-
-Transfer funds directly to a card using a single helper.
 
 ```ts
 const result = await kb.transferToCard({
@@ -259,16 +222,20 @@ type OrderType =
   | "Order_DMS"
   | "Order_REC"
   | "DMSN3D"
-  | "OCT";
+  | "OCT"
+  | "GN3D"
+  | "GSMS";
 ```
 
 | Type      | Description                |
 | --------- | -------------------------- |
 | Order_SMS | Standard Purchase          |
-| Order_DMS | Preauthorization           |
+| Order_DMS | PreAuthorization           |
 | Order_REC | Recurring Payment          |
-| DMSN3D    | Recurring Preauthorization |
+| DMSN3D    | Recurring PreAuthorization |
 | OCT       | Account-to-Card            |
+| GN3D      | Google Pay 3D Secure       |
+| GSMS      | Google Pay Purchase        |
 
 ---
 
@@ -277,7 +244,7 @@ type OrderType =
 ### Test
 
 ```ts
-environment: "test"
+environment: "test";
 ```
 
 Base URL:
@@ -289,7 +256,7 @@ https://txpgtst.kapitalbank.az/api
 ### Production
 
 ```ts
-environment: "production"
+environment: "production";
 ```
 
 Base URL:
@@ -302,11 +269,11 @@ https://e-commerce.kapitalbank.az/api
 
 ## Roadmap
 
-* Stronger Type Safety
-* Additional Payment Helpers
-* GitHub Actions CI
-* Extended Test Coverage
-* Better Error Mapping
+- Error Mapping
+- Google Pay Support
+- Extended Test Coverage
+- Transaction Response Enhancements
+- v1.0 Stable Release
 
 ---
 
@@ -323,6 +290,8 @@ https://www.npmjs.com/package/kapital-bank-sdk
 ## License
 
 MIT
+
+---
 
 ## Author
 

@@ -19,11 +19,32 @@ export type OrderStatus =
 export type CVV2AuthStatus =
   | "Required"
   | "NotRequired"
+  | "IneligibleOrder"
+  | "Provided";
+
+export type AuthStatus =
+  | "Required"
+  | "Verified"
+  | "Provided"
+  | "NotRequired"
   | "IneligibleOrder";
 
 export type PaymentMethod =
-  | "Card";
+  | "Card"
+  | "GooglePay";
 
 export type CardBrand =
   | "Visa"
   | "Mastercard";
+
+export type TransactionPhase =
+  | "Single"
+  | "Auth"
+  | "Clearing";
+
+export type TransactionType =
+  | "Credit"
+  | "Refund";
+
+export type CofUsage =
+  | "Recurring";

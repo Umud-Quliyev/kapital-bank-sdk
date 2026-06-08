@@ -1,19 +1,20 @@
-export type TransactionPhase =
-  | "Single"
-  | "Auth"
-  | "Clearing";
+import {
+  TransactionPhase,
+  TransactionType,
+  CofUsage,
+} from "./enums";
 
 export interface TransactionRequest {
   phase: TransactionPhase;
 
   amount?: string;
 
-  type?: "Credit" | "Refund";
+  type?: TransactionType;
 
   authorizationKind?: "Preliminary";
 
   conditions?: {
-    cofUsage?: "Recurring";
+    cofUsage?: CofUsage;
   };
 }
 

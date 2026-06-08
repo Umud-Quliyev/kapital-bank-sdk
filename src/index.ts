@@ -10,3 +10,4 @@ export * from "./types/token";
 export * from "./types/destination-token";
 export * from "./types/transfer";
 export * from "./types/enums";
+export * from "./errors/KapitalBankError";

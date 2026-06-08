@@ -10,8 +10,10 @@ export type OrderType =
   | "Order_DMS"
   | "Order_REC"
   | "DMSN3D"
-  | "OCT";
-
+  | "OCT"
+  | "GN3D"
+  | "GSMS";
+  
 export interface CreateOrderRequest {
   typeRid: OrderType;
 
