@@ -20,7 +20,7 @@
     "sdk",
     "typescript"
   ],
-  "author": "",
+  "author": "Umud Quliyev",
   "license": "MIT",
   "type": "module",
   "dependencies": {
@@ -39,5 +39,15 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
+  },
+  "author": "Umud Guliyev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Umud-Quliyev/kapital-bank-sdk.git"
+  },
+  "homepage": "https://github.com/Umud-Quliyev/kapital-bank-sdk",
+  "bugs": {
+    "url": "https://github.com/Umud-Quliyev/kapital-bank-sdk/issues"
   }
 }
