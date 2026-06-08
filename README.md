@@ -1,7 +1,10 @@
 # Kapital Bank SDK
 
-TypeScript SDK for Kapital Bank Payment Gateway API.
+![npm](https://img.shields.io/npm/v/kapital-bank-sdk)
+![license](https://img.shields.io/npm/l/kapital-bank-sdk)
+![typescript](https://img.shields.io/badge/TypeScript-Ready-blue)
 
+TypeScript SDK for Kapital Bank Payment Gateway API.
 ## Installation
 
 ```bash
@@ -21,6 +24,7 @@ npm install kapital-bank-sdk
 - Card Transfer Helper (OCT)
 - PreAuthorization Helper
 - Clearing Helper
+- Typed Error Handling (`KapitalBankError`)
 - Full TypeScript Support
 - ESM & CommonJS Support
 
@@ -184,6 +188,38 @@ await kb.clear(order.id, "1.00");
 
 ---
 
+## Error Handling
+
+```ts
+import {
+  KapitalBankError,
+} from "kapital-bank-sdk";
+
+try {
+  await kb.executeTransaction(...);
+} catch (error) {
+  if (
+    error instanceof KapitalBankError
+  ) {
+    if (error.isDeclined()) {
+      console.log("Transaction declined");
+    }
+  }
+}
+```
+
+`KapitalBankError` provides helper methods for common API error codes:
+
+| Method                  | Error Code          |
+| ----------------------- | ------------------- |
+| `isDeclined()`          | `PmoDecline`        |
+| `isInvalidToken()`      | `InvalidToken`      |
+| `isInvalidOrderState()` | `InvalidOrderState` |
+| `isOrderNotFound()`     | `OrderNotFound`     |
+| `isSystemError()`       | `SystemError`       |
+
+---
+
 ## Card Transfer (OCT)
 
 ```ts
@@ -269,7 +305,6 @@ https://e-commerce.kapitalbank.az/api
 
 ## Roadmap
 
-- Error Mapping
 - Google Pay Support
 - Extended Test Coverage
 - Transaction Response Enhancements
