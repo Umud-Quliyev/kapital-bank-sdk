@@ -8,7 +8,12 @@ async function main() {
   });
 
   const order = await kb.getOrder(
-    232699
+    232699,
+    {
+      tranDetailLevel: 2,
+      tokenDetailLevel: 2,
+      orderDetailLevel: 2,
+    }
   );
 
   console.log(order);
