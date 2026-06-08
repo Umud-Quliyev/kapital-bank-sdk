@@ -1,3 +1,10 @@
+import {
+  Currency,
+  Language,
+  OrderStatus,
+  CVV2AuthStatus,
+} from "./enums";
+
 export type OrderType =
   | "Order_SMS"
   | "Order_DMS"
@@ -10,9 +17,9 @@ export interface CreateOrderRequest {
 
   amount: string;
 
-  currency: string;
+  currency: Currency;
 
-  language: string;
+  language: Language;
 
   description: string;
 
@@ -43,9 +50,14 @@ export interface CreateOrderRequest {
 
 export interface CreateOrderResponse {
   id: number;
+
   hppUrl: string;
+
   password: string;
-  status: string;
-  cvv2AuthStatus: string;
+
   secret: string;
+
+  status: OrderStatus;
+
+  cvv2AuthStatus: CVV2AuthStatus;
 }

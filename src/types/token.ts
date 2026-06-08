@@ -1,3 +1,5 @@
+import { PaymentMethod, CardBrand } from "./enums";
+
 export type InitiationEnvKind =
   | "Browser"
   | "Server";
@@ -9,12 +11,12 @@ export interface SetSourceTokenRequest {
 
 export interface SourceTokenCard {
   expiration: string;
-  brand: string;
+  brand: CardBrand;
 }
 
 export interface SourceToken {
   id: number;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   role: string;
   status: string;
   regTime: string;

@@ -1,7 +1,12 @@
+import { Currency } from "./enums";
+
 export interface TransferToCardRequest {
   amount: string;
-  currency?: string;
+
+  currency?: Currency;
+
   pan: string;
+
   description?: string;
 }
 

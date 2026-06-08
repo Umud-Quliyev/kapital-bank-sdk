@@ -1,9 +1,11 @@
-export type OrderStatus =
-  | "Preparing"
-  | "FullyPaid"
-  | "Refunded"
-  | "Expired"
-  | "Declined";
+import {
+  Currency,
+  OrderStatus,
+  CVV2AuthStatus,
+  Language,
+} from "./enums";
+
+
 
 export interface OrderTypeInfo {
   title: string;
@@ -17,20 +19,20 @@ export interface OrderDetails {
   prevStatus?: OrderStatus;
 
   amount: number;
-  currency: string;
+  currency: Currency;
 
   createTime: string;
   finishTime?: string;
 
   title?: string;
   description?: string;
-  language?: string;
+  language?: Language;
 
   hppUrl?: string;
   hppRedirectUrl?: string;
   password?: string;
 
-  cvv2AuthStatus?: string;
+  cvv2AuthStatus?: CVV2AuthStatus;
 
   authorizedChargeAmount?: number;
   clearedChargeAmount?: number;

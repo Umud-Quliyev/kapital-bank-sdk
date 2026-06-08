@@ -3,6 +3,7 @@ import { KapitalBankClient } from "../client/KapitalBankClient";
 import { OrdersService } from "./orders.service";
 import { DestinationTokenService } from "./destination-token.service";
 import { TransactionsService } from "./transactions.service";
+import { Currency } from "../types/enums";
 
 import {
   TransferToCardRequest,
@@ -35,7 +36,7 @@ export class TransfersService {
         typeRid: "OCT",
         amount: payload.amount,
         currency:
-          payload.currency ?? "AZN",
+          payload.currency ?? ("AZN" as Currency),
         language: "az",
         description:
           payload.description ??
