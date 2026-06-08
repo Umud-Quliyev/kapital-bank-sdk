@@ -14,7 +14,8 @@
     "example": "tsx examples/create-order.ts",
     "get-order": "tsx examples/get-order.ts",
     "reverse": "tsx examples/reverse.ts",
-    "set-token": "tsx examples/set-source-token.ts"
+    "set-token": "tsx examples/set-source-token.ts",
+    "recurring": "tsx examples/recurring-payment.ts"
   },
   "keywords": [
     "kapital-bank",

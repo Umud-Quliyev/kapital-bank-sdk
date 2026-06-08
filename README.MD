@@ -16,6 +16,7 @@ npm install kapital-bank-sdk
 * Refund Transactions
 * Reverse Transactions
 * Set Source Token (Saved Cards)
+* Recurring Payment Support
 * Full TypeScript Support
 * ESM & CommonJS Support
 
@@ -71,6 +72,16 @@ console.log(details);
 
 ---
 
+## Execute Transaction
+
+```ts
+await kb.executeTransaction(order.id, {
+  phase: "Single",
+});
+```
+
+---
+
 ## Refund Transaction
 
 ```ts
@@ -118,6 +129,39 @@ Example response:
     displayName: "416974******1778"
   }
 }
+```
+
+---
+
+## Recurring Payment
+
+```ts
+const order = await kb.createOrder({
+  typeRid: "Order_REC",
+  amount: "1",
+  currency: "AZN",
+  language: "az",
+  description: "Recurring Payment",
+});
+
+await kb.setSourceToken(
+  order.id,
+  order.password,
+  {
+    initiationEnvKind: "Server",
+    storedId: 5125,
+  }
+);
+
+await kb.executeTransaction(
+  order.id,
+  {
+    phase: "Single",
+    conditions: {
+      cofUsage: "Recurring",
+    },
+  }
+);
 ```
 
 ---
@@ -173,9 +217,9 @@ https://e-commerce.kapitalbank.az/api
 
 ## Roadmap
 
-* Recurring Payment Examples
 * Destination Token Support
 * Card Transfer (OCT)
+* Stronger Type Safety
 * GitHub Actions CI
 * Extended Test Coverage
 
