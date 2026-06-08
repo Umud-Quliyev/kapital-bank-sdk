@@ -19,7 +19,8 @@
     "set-dst-token": "tsx examples/set-destination-token.ts",
     "transfer": "tsx examples/transfer-to-card.ts",
     "preauthorize": "tsx examples/preauthorize.ts",
-    "clear": "tsx examples/clear.ts"
+    "clear": "tsx examples/clear.ts",
+    "error-test": "tsx examples/error-handling.ts"
   },
   "keywords": [
     "kapital-bank",
