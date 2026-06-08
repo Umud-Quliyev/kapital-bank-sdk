@@ -1,13 +1,22 @@
-export interface GetDetailsRequest {
-  orderId: string;
+export interface OrderTypeInfo {
+  title: string;
 }
 
-export interface DetailsResponse {
-  orderId: string;
+export interface OrderDetails {
+  id: number;
+  status: string;
+  prevStatus?: string;
   amount: number;
   currency: string;
-  status: string;
-  transactionId?: string;
-  createdAt: string;
-  updatedAt: string;
+  createTime: string;
+  finishTime?: string;
+  title?: string;
+  description?: string;
+  type?: OrderTypeInfo;
+}
+
+export interface GetOrderDetailsOptions {
+  tranDetailLevel?: number;
+  tokenDetailLevel?: number;
+  orderDetailLevel?: number;
 }
