@@ -1,12 +1,11 @@
 {
   "name": "kapital-bank-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript SDK for Kapital Bank payment services",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
-
   "scripts": {
     "build": "tsup",
     "test": "vitest",
@@ -17,21 +16,17 @@
     "reverse": "tsx examples/reverse.ts",
     "set-token": "tsx examples/set-source-token.ts"
   },
-
   "keywords": [
     "kapital-bank",
     "payment",
     "sdk",
     "typescript"
   ],
-
   "author": "Umud Quliyev",
   "license": "MIT",
-
   "dependencies": {
     "axios": "^1.17.0"
   },
-
   "devDependencies": {
     "@types/node": "^25.9.2",
     "tsup": "^8.5.1",
@@ -39,7 +34,6 @@
     "typescript": "^5.9.2",
     "vitest": "^4.1.8"
   },
-
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -47,14 +41,11 @@
       "require": "./dist/index.cjs"
     }
   },
-
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Umud-Quliyev/kapital-bank-sdk.git"
   },
-
   "homepage": "https://github.com/Umud-Quliyev/kapital-bank-sdk",
-
   "bugs": {
     "url": "https://github.com/Umud-Quliyev/kapital-bank-sdk/issues"
   },
