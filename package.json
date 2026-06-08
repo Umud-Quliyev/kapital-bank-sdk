@@ -14,7 +14,8 @@
     "dev": "tsup --watch",
     "example": "tsx examples/create-order.ts",
     "get-order": "tsx examples/get-order.ts",
-    "reverse": "tsx examples/reverse.ts"
+    "reverse": "tsx examples/reverse.ts",
+    "set-token": "tsx examples/set-source-token.ts"
   },
 
   "keywords": [
