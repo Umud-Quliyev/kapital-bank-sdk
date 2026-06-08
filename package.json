@@ -1,0 +1,41 @@
+{
+  "name": "kapital-bank-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for Kapital Bank payment services",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+"scripts": {
+  "build": "tsup",
+  "test": "vitest",
+  "test:run": "vitest run",
+  "dev": "tsup --watch",
+  "example": "tsx examples/create-order.ts"
+},
+  "keywords": [
+    "kapital-bank",
+    "payment",
+    "sdk",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "axios": "^1.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.22.4",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.8"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  }
+}
