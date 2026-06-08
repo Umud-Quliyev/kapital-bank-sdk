@@ -16,9 +16,34 @@ npm install kapital-bank-sdk
 * Refund Transactions
 * Reverse Transactions
 * Set Source Token (Saved Cards)
+* Set Destination Token
 * Recurring Payment Support
+* Card Transfer Helper (OCT)
 * Full TypeScript Support
 * ESM & CommonJS Support
+
+---
+
+## Quick Example
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = new KapitalBank({
+  username: "TerminalSys/kapital",
+  password: "kapital123",
+  environment: "test",
+});
+
+const result = await kb.transferToCard({
+  amount: "1",
+  pan: "4169741330151778",
+});
+
+console.log(result);
+```
+
+---
 
 ## Quick Start
 
@@ -133,6 +158,34 @@ Example response:
 
 ---
 
+## Set Destination Token
+
+```ts
+await kb.setDestinationToken(
+  order.id,
+  order.password,
+  {
+    pan: "4169741330151778",
+  }
+);
+```
+
+Example response:
+
+```ts
+{
+  status: "Preparing",
+  dstToken: {
+    id: 144494,
+    role: "Dst",
+    status: "Active",
+    displayName: "416974******1778"
+  }
+}
+```
+
+---
+
 ## Recurring Payment
 
 ```ts
@@ -163,6 +216,38 @@ await kb.executeTransaction(
   }
 );
 ```
+
+---
+
+## Card Transfer (OCT)
+
+Transfer funds directly to a card using a single helper.
+
+```ts
+const result = await kb.transferToCard({
+  amount: "1",
+  pan: "4169741330151778",
+});
+
+console.log(result);
+```
+
+Example response:
+
+```ts
+{
+  orderId: 232774,
+  destinationTokenId: 144495,
+  approvalCode: "007696",
+  pmoResultCode: "1"
+}
+```
+
+The SDK automatically:
+
+1. Creates an OCT order
+2. Creates a destination token
+3. Executes the credit transaction
 
 ---
 
@@ -217,11 +302,11 @@ https://e-commerce.kapitalbank.az/api
 
 ## Roadmap
 
-* Destination Token Support
-* Card Transfer (OCT)
 * Stronger Type Safety
+* Additional Payment Helpers
 * GitHub Actions CI
 * Extended Test Coverage
+* Better Error Mapping
 
 ---
 
