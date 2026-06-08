@@ -8,6 +8,8 @@ import { RefundsService } from "./services/refunds.service";
 import { ReversalsService } from "./services/reversals.service";
 import { DestinationTokenService } from "./services/destination-token.service";
 import { TransfersService } from "./services/transfers.service";
+import { PreAuthService } from "./services/preauth.service";
+import { ClearingService } from "./services/clearing.service";
 
 import {
   TransferToCardRequest,
@@ -62,6 +64,8 @@ export class KapitalBank {
   private readonly tokensService: TokensService;
   private readonly destinationTokenService: DestinationTokenService;
   private readonly transfersService: TransfersService;
+  private readonly preAuthService: PreAuthService;
+  private readonly clearingService: ClearingService;
 
   constructor(config: KapitalBankConfig) {
     const client = new KapitalBankClient(config);
@@ -74,6 +78,8 @@ export class KapitalBank {
     this.tokensService = new TokensService(client);
     this.destinationTokenService = new DestinationTokenService(client);
     this.transfersService = new TransfersService(client);
+    this.preAuthService = new PreAuthService(client);
+    this.clearingService = new ClearingService(client);
   }
 
   async createOrder(
@@ -151,5 +157,19 @@ async transferToCard(
 ): Promise<TransferToCardResponse> {
   return this.transfersService
     .transferToCard(payload);
+}
+
+async preAuthorize(
+  orderId: number | string,
+  amount?: string
+): Promise<TransactionResponse> {
+  return this.preAuthService.preAuthorize(orderId, amount);
+}
+
+async clear(
+  orderId: number | string,
+  amount?: string
+): Promise<TransactionResponse> {
+  return this.clearingService.clear(orderId, amount);
 }
 }

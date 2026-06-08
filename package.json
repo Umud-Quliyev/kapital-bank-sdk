@@ -17,7 +17,9 @@
     "set-token": "tsx examples/set-source-token.ts",
     "recurring": "tsx examples/recurring-payment.ts",
     "set-dst-token": "tsx examples/set-destination-token.ts",
-    "transfer": "tsx examples/transfer-to-card.ts"
+    "transfer": "tsx examples/transfer-to-card.ts",
+    "preauthorize": "tsx examples/preauthorize.ts",
+    "clear": "tsx examples/clear.ts"
   },
   "keywords": [
     "kapital-bank",
