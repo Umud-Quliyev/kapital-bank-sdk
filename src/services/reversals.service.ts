@@ -1,45 +1,29 @@
-import axios from "axios";
-
-import { KapitalBankClient } from "../client/KapitalBankClient";
-import { ENDPOINTS } from "../constants/endpoints";
-import { KapitalBankError } from "../errors/KapitalBankError";
+import { TransactionsService } from "./transactions.service";
 
 import {
   ReversalRequest,
   ReversalResponse,
 } from "../types/reversal";
 
+import { KapitalBankClient } from "../client/KapitalBankClient";
+
 export class ReversalsService {
+  private readonly transactionsService: TransactionsService;
+
   constructor(
-    private readonly client: KapitalBankClient
-  ) {}
+    client: KapitalBankClient
+  ) {
+    this.transactionsService =
+      new TransactionsService(client);
+  }
 
   async reverse(
     orderId: number | string,
     payload: ReversalRequest
   ): Promise<ReversalResponse> {
-    try {
-      const response = await this.client
-        .getHttp()
-        .post(
-          ENDPOINTS.EXEC_TRAN(orderId),
-          {
-            tran: payload,
-          }
-        );
-
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new KapitalBankError(
-          error.response?.data?.message ??
-            error.message,
-          error.response?.status,
-          error.response?.data
-        );
-      }
-
-      throw error;
-    }
+    return this.transactionsService.execute(
+      orderId,
+      payload
+    ) as Promise<ReversalResponse>;
   }
 }

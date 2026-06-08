@@ -1,44 +1,29 @@
-import axios from "axios";
+import { TransactionsService } from "./transactions.service";
 
-import { KapitalBankClient } from "../client/KapitalBankClient";
-import { ENDPOINTS } from "../constants/endpoints";
-import { KapitalBankError } from "../errors/KapitalBankError";
 import {
   RefundRequest,
   RefundResponse,
 } from "../types/refund";
 
+import { KapitalBankClient } from "../client/KapitalBankClient";
+
 export class RefundsService {
+  private readonly transactionsService: TransactionsService;
+
   constructor(
-    private readonly client: KapitalBankClient
-  ) {}
+    client: KapitalBankClient
+  ) {
+    this.transactionsService =
+      new TransactionsService(client);
+  }
 
   async refund(
     orderId: number | string,
     payload: RefundRequest
   ): Promise<RefundResponse> {
-    try {
-      const response = await this.client
-        .getHttp()
-        .post(
-          ENDPOINTS.EXEC_TRAN(orderId),
-          {
-            tran: payload,
-          }
-        );
-
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new KapitalBankError(
-          error.response?.data?.message ??
-            error.message,
-          error.response?.status,
-          error.response?.data
-        );
-      }
-
-      throw error;
-    }
+    return this.transactionsService.execute(
+      orderId,
+      payload
+    ) as Promise<RefundResponse>;
   }
 }
