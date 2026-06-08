@@ -6,4 +6,10 @@ export const ENDPOINTS = {
   
   EXEC_TRAN: (id: number | string) =>
     `/order/${id}/exec-tran`,
+  
+  SET_SRC_TOKEN: (
+    id: number | string,
+    password: string
+  ) =>
+    `/order/${id}/set-src-token?password=${password}`,
 } as const;

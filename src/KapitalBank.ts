@@ -27,11 +27,27 @@ import {
   ReversalResponse,
 } from "./types/reversal";
 
+import { TransactionsService } from "./services/transactions.service";
+
+import {
+  TransactionRequest,
+  TransactionResponse,
+} from "./types/transaction";
+
+import { TokensService } from "./services/tokens.service";
+
+import {
+  SetSourceTokenRequest,
+  SetSourceTokenResponse,
+} from "./types/token";
+
 export class KapitalBank {
   private readonly ordersService: OrdersService;
   private readonly detailsService: DetailsService;
   private readonly refundsService: RefundsService;
   private readonly reversalsService: ReversalsService;
+  private readonly transactionsService: TransactionsService;
+  private readonly tokensService: TokensService;
 
   constructor(config: KapitalBankConfig) {
     const client = new KapitalBankClient(config);
@@ -40,6 +56,8 @@ export class KapitalBank {
     this.detailsService = new DetailsService(client);
     this.refundsService = new RefundsService(client);
     this.reversalsService = new ReversalsService(client);
+    this.transactionsService = new TransactionsService(client);
+    this.tokensService = new TokensService(client);
   }
 
   async createOrder(
@@ -74,6 +92,28 @@ export class KapitalBank {
   ): Promise<ReversalResponse> {
     return this.reversalsService.reverse(
       orderId,
+      payload
+    );
+  }
+  
+  async executeTransaction(
+    orderId: number | string,
+    payload: TransactionRequest
+  ): Promise<TransactionResponse> {
+    return this.transactionsService.execute(
+      orderId,
+      payload
+    );
+  }
+  
+  async setSourceToken(
+    orderId: number | string,
+    password: string,
+    payload: SetSourceTokenRequest
+  ): Promise<SetSourceTokenResponse> {
+    return this.tokensService.setSourceToken(
+      orderId,
+      password,
       payload
     );
   }
