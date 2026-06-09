@@ -42,13 +42,22 @@
     "test-security-fixes": "tsx examples/test-security-fixes.ts"
   },
   "keywords": [
-    "kapital-bank",
-    "payment",
-    "sdk",
-    "typescript"
+  "kapital-bank",
+  "kapitalbank",
+  "birbank",
+  "azerbaijan",
+  "payment-gateway",
+  "payment",
+  "ecommerce",
+  "3ds",
+  "3d-secure",
+  "typescript",
+  "nodejs",
+  "banking",
+  "google-pay"
   ],
   "author": "Umud Quliyev",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "axios": "^1.17.0"
   },
