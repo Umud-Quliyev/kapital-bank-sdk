@@ -1,3 +1,4 @@
+import { OrderDetails } from "./details";
 import { OrderStatus } from "./enums";
 
 export interface WatchOrderOptions {
@@ -5,6 +6,7 @@ export interface WatchOrderOptions {
   timeout?: number;
   stopStatuses?: OrderStatus[];
   password?: string;
+  onStatusChange?: (order: OrderDetails) => void;
 }
 
 export interface WaitForStatusOptions {

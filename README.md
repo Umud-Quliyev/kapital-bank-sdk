@@ -15,6 +15,14 @@ npm install kapital-bank-sdk
 
 ## Features
 
+- Environment-based configuration with `KapitalBank.fromEnv()`
+- Default order settings from config or environment variables
+- `createHostedPayment()` — one-call HPP session (`orderId`, `password`, `paymentUrl`, `order`)
+- `restoreOrder()` — resume an unfinished HPP order in `Preparing` status
+- Order status helpers (`isPreparing`, `isFullyPaid`, and more)
+- Low-level `request()` escape hatch for undocumented API endpoints
+- EventEmitter support (`payment:paid`, `payment:declined`, and more)
+- Debug request logging via `KAPITALBANK_LOG_ENABLED`
 - Hosted Payment Page (HPP) with `getPaymentUrl()`
 - Payment monitoring (`waitForPayment`, `waitForStatus`, `watchOrder`)
 - Create Order & Get Order Details
@@ -33,6 +41,42 @@ npm install kapital-bank-sdk
 
 Create an order, open the payment page, wait until the customer pays.
 
+### Option A — Environment Variables
+
+```env
+KAPITALBANK_MODE=test
+KAPITALBANK_USERNAME=TerminalSys/kapital
+KAPITALBANK_PASSWORD=kapital123
+
+KAPITALBANK_ORDER_TYPE=Order_SMS
+KAPITALBANK_CURRENCY=AZN
+KAPITALBANK_LANGUAGE=az
+KAPITALBANK_REDIRECT_URL=https://your-site.com/callback
+KAPITALBANK_LOG_ENABLED=true
+```
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+const session = await kb.createHostedPayment({
+  amount: "1",
+  description: "Payment",
+});
+
+console.log(session.paymentUrl);
+
+const result = await kb.waitForPayment(
+  session.orderId,
+  { password: session.password }
+);
+```
+
+When env defaults are set, `createOrder()` and `createHostedPayment()` apply `typeRid`, `currency`, `language`, and `hppRedirectUrl` automatically.
+
+### Option B — Constructor Config
+
 ```ts
 import {
   KapitalBank,
@@ -43,15 +87,17 @@ const kb = new KapitalBank({
   username: "TerminalSys/kapital",
   password: "kapital123",
   environment: "test",
+  defaults: {
+    currency: "AZN",
+    language: "az",
+    hppRedirectUrl: "https://your-site.com/callback",
+  },
 });
 
 const order = await kb.createOrder({
   typeRid: "Order_SMS",
   amount: "1",
-  currency: "AZN",
-  language: "az",
   description: "Payment",
-  hppRedirectUrl: "https://your-site.com/callback",
   initiationEnvKind: "Browser",
   hppCofCapturePurposes: ["Cit"],
 });
@@ -74,7 +120,89 @@ console.log(result.status);
 
 ---
 
+## Restore Order
+
+Kapital Bank does not expose a separate "restore" HTTP endpoint. An unfinished HPP order in `Preparing` status can be resumed by rebuilding the payment URL from stored `orderId` and `password`.
+
+`restoreOrder()` validates the status and returns a ready-to-redirect session:
+
+```ts
+import {
+  KapitalBank,
+  isPreparing,
+} from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+const details = await kb.getOrder(orderId, {
+  password,
+});
+
+if (isPreparing(details)) {
+  const session = await kb.restoreOrder(
+    orderId,
+    password
+  );
+
+  console.log(session.paymentUrl);
+}
+```
+
+Only orders with status `Preparing` can be restored. Other statuses throw `KapitalBankError` with code `InvalidOrderState`.
+
+---
+
+## Order Status Helpers
+
+Tree-shakable utilities for common status checks:
+
+```ts
+import {
+  isPreparing,
+  isFullyPaid,
+  isDeclined,
+  isExpired,
+  isRefunded,
+  isReversed,
+} from "kapital-bank-sdk";
+
+if (isFullyPaid(order)) {
+  // fulfill order
+}
+```
+
+---
+
+## Custom API Requests
+
+Use `request()` when you need an endpoint not yet wrapped by the SDK. Authentication and base URL are reused automatically:
+
+```ts
+const response = await kb.request<{ order: OrderDetails }>(
+  "GET",
+  `/order/${orderId}`,
+  undefined,
+  { params: { password } }
+);
+```
+
+---
+
 ## Hosted Payment Page (HPP)
+
+### `createHostedPayment()`
+
+The simplest way to start an HPP flow:
+
+```ts
+const session = await kb.createHostedPayment({
+  amount: "10",
+  description: "Order",
+});
+
+// { orderId, password, paymentUrl, order }
+console.log(session.order.status);
+```
 
 See [Quick Start](#quick-start) for the full flow. Additional options:
 
@@ -112,21 +240,125 @@ const url = getPaymentUrl(order);
 
 ---
 
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description |
+| -------- | -------- | ----------- |
+| `KAPITALBANK_USERNAME` | Yes | API username |
+| `KAPITALBANK_PASSWORD` | Yes | API password |
+| `KAPITALBANK_MODE` | No | `test` or `production` (default: `test`) |
+| `KAPITALBANK_TIMEOUT` | No | HTTP timeout in milliseconds |
+| `KAPITALBANK_ORDER_TYPE` | No | Default order type (e.g. `Order_SMS`) |
+| `KAPITALBANK_CURRENCY` | No | Default order currency (`AZN`, `USD`, `EUR`) |
+| `KAPITALBANK_LANGUAGE` | No | Default order language (`az`, `en`, `ru`) |
+| `KAPITALBANK_REDIRECT_URL` | No | Default `hppRedirectUrl` for HPP orders |
+| `KAPITALBANK_LOG_ENABLED` | No | Log HTTP requests (`true` / `false`) |
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+```
+
+You can also parse env vars manually:
+
+```ts
+import {
+  KapitalBank,
+  parseEnvConfig,
+} from "kapital-bank-sdk";
+
+const kb = new KapitalBank(parseEnvConfig());
+```
+
+### Constructor Defaults
+
+```ts
+const kb = new KapitalBank({
+  username: process.env.KAPITALBANK_USERNAME!,
+  password: process.env.KAPITALBANK_PASSWORD!,
+  environment: "test",
+  defaults: {
+    currency: "AZN",
+    language: "az",
+    hppRedirectUrl: "https://your-site.com/callback",
+  },
+});
+```
+
+Explicit `createOrder()` values always override configured defaults.
+
+### Debug Logging
+
+When `KAPITALBANK_LOG_ENABLED=true` or `logEnabled: true`:
+
+```text
+[KapitalBank]
+POST /order
+
+[KapitalBank]
+GET /order/233266
+```
+
+---
+
+## Events
+
+`KapitalBank` extends Node.js `EventEmitter` with typed payment events:
+
+```ts
+kb.on("payment:paid", (order) => {
+  console.log("Paid:", order.id);
+});
+
+kb.on("payment:declined", (order) => {
+  console.log("Declined:", order.id);
+});
+
+kb.on("payment:status", (order) => {
+  console.log("Status:", order.status);
+});
+
+const session = await kb.createHostedPayment({
+  amount: "1",
+  description: "Bot payment",
+});
+
+await kb.waitForPayment(session.orderId, {
+  password: session.password,
+});
+```
+
+| Event | When |
+| ----- | ---- |
+| `order:created` | After `createOrder()` |
+| `payment:created` | After `createHostedPayment()` |
+| `payment:status` | On each poll during monitoring |
+| `payment:paid` | Order reaches `FullyPaid` |
+| `payment:declined` | Order reaches `Declined` |
+| `payment:expired` | Order reaches `Expired` |
+| `payment:refunded` | Order reaches `Refunded` |
+| `payment:reversed` | Order reaches `Reversed` |
+
+Ideal for Telegram bots, Discord bots, n8n workflows, and WebSocket bridges.
+
+---
+
 ## Create Order
 
 ```ts
 const order = await kb.createOrder({
-  typeRid: "Order_SMS",
   amount: "1",
-  currency: "AZN",
-  language: "az",
   description: "SDK Test Order",
-  hppRedirectUrl: "https://your-site.com/callback",
 });
 
 console.log(order.id);
 console.log(getPaymentUrl(order));
 ```
+
+You can still pass `typeRid`, `currency`, `language`, and `hppRedirectUrl` per order when needed.
 
 ---
 
@@ -427,6 +659,10 @@ npm install
 
 | Script               | Command                    | Description                              |
 | -------------------- | -------------------------- | ---------------------------------------- |
+| From env             | `npm run from-env`         | Create order using environment variables |
+| Hosted payment       | `npm run hosted-payment`   | `createHostedPayment()` demo             |
+| Restore order        | `npm run restore-order`    | Resume a preparing HPP order             |
+| Payment events       | `npm run payment-events`   | EventEmitter + wait for payment          |
 | HPP payment URL      | `npm run hpp-payment`      | Create order and print payment URL       |
 | HPP wait for payment | `npm run hpp-wait`         | Create order, print URL, poll until paid |
 | Create order         | `npm run example`          | Basic order creation                     |
@@ -444,7 +680,6 @@ npm install
 
 ## Roadmap
 
-- Event Emitter Support
 - Webhook/Event Integrations
 - Google Pay Support
 - Extended Test Coverage

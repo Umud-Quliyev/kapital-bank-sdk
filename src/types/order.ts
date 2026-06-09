@@ -50,6 +50,16 @@ export interface CreateOrderRequest {
   };
 }
 
+export type CreateOrderInput = Omit<
+  CreateOrderRequest,
+  "typeRid" | "currency" | "language" | "hppRedirectUrl"
+> & {
+  typeRid?: OrderType;
+  currency?: Currency;
+  language?: Language;
+  hppRedirectUrl?: string;
+};
+
 export interface CreateOrderResponse {
   id: number;
 

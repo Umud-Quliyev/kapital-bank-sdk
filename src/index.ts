@@ -1,5 +1,6 @@
 export * from "./KapitalBank";
 
+export * from "./config/env";
 export * from "./types/config";
 export * from "./types/order";
 export * from "./types/details";
@@ -10,8 +11,13 @@ export * from "./types/token";
 export * from "./types/destination-token";
 export * from "./types/transfer";
 export * from "./types/payment-monitor";
+export * from "./types/hosted-payment";
+export * from "./types/events";
 export * from "./types/enums";
 export * from "./errors/KapitalBankError";
 export * from "./errors/error-codes";
 export * from "./errors/WatchOrderTimeoutError";
 export * from "./utils/payment-url";
+export * from "./utils/order-status";
+export * from "./types/request";
+export * from "./types/restore-order";

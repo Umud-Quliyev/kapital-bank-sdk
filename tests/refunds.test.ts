@@ -1,27 +1,72 @@
-import { describe, it, expect } from 'vitest';
-import { KapitalBankClient } from '../src';
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-describe('RefundsService', () => {
-  const client = new KapitalBankClient({
-    merchantId: 'test-merchant',
-    password: 'test-password',
-    environment: 'test',
+const httpMocks = vi.hoisted(() => ({
+  post: vi.fn(),
+  get: vi.fn(),
+}));
+
+vi.mock("axios", () => ({
+  default: {
+    create: vi.fn(() => httpMocks),
+    isAxiosError: (error: unknown) =>
+      Boolean(
+        error &&
+          typeof error === "object" &&
+          "isAxiosError" in error &&
+          (error as { isAxiosError: boolean }).isAxiosError
+      ),
+  },
+  isAxiosError: (error: unknown) =>
+    Boolean(
+      error &&
+        typeof error === "object" &&
+        "isAxiosError" in error &&
+        (error as { isAxiosError: boolean }).isAxiosError
+    ),
+}));
+
+import { KapitalBank } from "../src";
+import { ENDPOINTS } from "../src/constants/endpoints";
+
+describe("RefundsService", () => {
+  const kb = new KapitalBank({
+    username: "TerminalSys/kapital",
+    password: "kapital123",
+    environment: "test",
   });
 
-  it('should create a refund', async () => {
-    const refund = await client.refunds.create({
-      orderId: 'test-order-id',
-      amount: 50,
-      reason: 'Customer request',
+  beforeEach(() => {
+    httpMocks.post.mockReset();
+    httpMocks.get.mockReset();
+  });
+
+  it("should create a refund", async () => {
+    httpMocks.post.mockResolvedValue({
+      data: {
+        tran: {
+          approvalCode: "007696",
+          pmoResultCode: "1",
+        },
+      },
     });
 
-    expect(refund).toBeDefined();
-    expect(refund.refundId).toBeDefined();
-    expect(refund.amount).toBe(50);
-  });
+    const refund = await kb.refund(123456, {
+      phase: "Single",
+      amount: "50",
+      type: "Refund",
+    });
 
-  it('should get a refund', async () => {
-    const refund = await client.refunds.get('test-refund-id');
-    expect(refund).toBeDefined();
+    expect(httpMocks.post).toHaveBeenCalledWith(
+      ENDPOINTS.EXEC_TRAN(123456),
+      {
+        tran: {
+          phase: "Single",
+          amount: "50",
+          type: "Refund",
+        },
+      }
+    );
+    expect(refund.approvalCode).toBe("007696");
+    expect(refund.pmoResultCode).toBe("1");
   });
 });

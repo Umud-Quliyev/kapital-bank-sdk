@@ -1,6 +1,6 @@
 {
   "name": "kapital-bank-sdk",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "TypeScript SDK for Kapital Bank payment services",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -24,7 +24,11 @@
     "watch-order": "tsx examples/watch-order.ts",
     "wait-for-payment": "tsx examples/wait-for-payment.ts",
     "hpp-payment": "tsx examples/hpp-payment.ts",
-    "hpp-wait": "tsx examples/hpp-wait-for-payment.ts"
+    "hpp-wait": "tsx examples/hpp-wait-for-payment.ts",
+    "from-env": "tsx examples/from-env.ts",
+    "hosted-payment": "tsx examples/create-hosted-payment.ts",
+    "payment-events": "tsx examples/payment-events.ts",
+    "restore-order": "tsx examples/restore-order.ts"
   },
   "keywords": [
     "kapital-bank",

@@ -32,6 +32,7 @@ export class PaymentMonitorService {
       interval = 5000,
       timeout = 300000,
       password,
+      onStatusChange,
       stopStatuses = [
         "FullyPaid",
         "Declined",
@@ -59,10 +60,7 @@ export class PaymentMonitorService {
               : undefined
           );
 
-      console.log(
-        "Current status:",
-        order.status
-      );
+      onStatusChange?.(order);
 
       if (
         stopStatuses.includes(
