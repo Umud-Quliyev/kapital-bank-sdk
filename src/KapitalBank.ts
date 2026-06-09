@@ -10,6 +10,7 @@ import { DestinationTokenService } from "./services/destination-token.service";
 import { TransfersService } from "./services/transfers.service";
 import { PreAuthService } from "./services/preauth.service";
 import { ClearingService } from "./services/clearing.service";
+import { PaymentMonitorService } from "./services/payment-monitor.service";
 
 import {
   TransferToCardRequest,
@@ -54,6 +55,11 @@ import {
   SetSourceTokenRequest,
   SetSourceTokenResponse,
 } from "./types/token";
+import { WaitForStatusOptions, WatchOrderOptions } from "./types/payment-monitor";
+
+import {
+  OrderStatus,
+} from "./types/enums";
 
 export class KapitalBank {
   private readonly ordersService: OrdersService;
@@ -66,7 +72,7 @@ export class KapitalBank {
   private readonly transfersService: TransfersService;
   private readonly preAuthService: PreAuthService;
   private readonly clearingService: ClearingService;
-
+  private readonly paymentMonitorService: PaymentMonitorService;
   constructor(config: KapitalBankConfig) {
     const client = new KapitalBankClient(config);
 
@@ -80,6 +86,7 @@ export class KapitalBank {
     this.transfersService = new TransfersService(client);
     this.preAuthService = new PreAuthService(client);
     this.clearingService = new ClearingService(client);
+    this.paymentMonitorService = new PaymentMonitorService(client);
   }
 
   async createOrder(
@@ -171,5 +178,40 @@ async clear(
   amount?: string
 ): Promise<TransactionResponse> {
   return this.clearingService.clear(orderId, amount);
+}
+
+async watchOrder(
+  orderId: number | string,
+  options: WatchOrderOptions = {}
+): Promise<OrderDetails> {
+  return this.paymentMonitorService
+    .watchOrder(
+      orderId,
+      options
+    );
+}
+
+async waitForPayment(
+  orderId: number | string,
+  options: WatchOrderOptions = {}
+): Promise<OrderDetails> {
+  return this.paymentMonitorService
+    .waitForPayment(
+      orderId,
+      options
+    );
+}
+
+async waitForStatus(
+  orderId: number | string,
+  status: OrderStatus,
+  options?: WatchOrderOptions
+): Promise<OrderDetails> {
+  return this.paymentMonitorService
+    .waitForStatus(
+      orderId,
+      status,
+      options
+    );
 }
 }

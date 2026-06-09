@@ -6,6 +6,7 @@
 ![downloads](https://img.shields.io/npm/dm/kapital-bank-sdk)
 
 TypeScript SDK for Kapital Bank Payment Gateway API.
+
 ## Installation
 
 ```bash
@@ -14,27 +15,29 @@ npm install kapital-bank-sdk
 
 ## Features
 
-- Create Order
-- Get Order Details
-- Execute Transactions
-- Refund Transactions
-- Reverse Transactions
-- Set Source Token (Saved Cards)
-- Set Destination Token
+- Hosted Payment Page (HPP) with `getPaymentUrl()`
+- Payment monitoring (`waitForPayment`, `waitForStatus`, `watchOrder`)
+- Create Order & Get Order Details
+- Execute, Refund, and Reverse Transactions
+- Set Source / Destination Token
 - Recurring Payment Support
 - Card Transfer Helper (OCT)
-- PreAuthorization Helper
-- Clearing Helper
-- Typed Error Handling (`KapitalBankError`)
+- PreAuthorization & Clearing Helpers
+- Typed Error Handling (`KapitalBankError`, `WatchOrderTimeoutError`)
 - Full TypeScript Support
 - ESM & CommonJS Support
 
 ---
 
-## Quick Example
+## Quick Start
+
+Create an order, open the payment page, wait until the customer pays.
 
 ```ts
-import { KapitalBank } from "kapital-bank-sdk";
+import {
+  KapitalBank,
+  getPaymentUrl,
+} from "kapital-bank-sdk";
 
 const kb = new KapitalBank({
   username: "TerminalSys/kapital",
@@ -42,26 +45,69 @@ const kb = new KapitalBank({
   environment: "test",
 });
 
-const result = await kb.transferToCard({
+const order = await kb.createOrder({
+  typeRid: "Order_SMS",
   amount: "1",
-  pan: "4169741330151778",
+  currency: "AZN",
+  language: "az",
+  description: "Payment",
+  hppRedirectUrl: "https://your-site.com/callback",
+  initiationEnvKind: "Browser",
+  hppCofCapturePurposes: ["Cit"],
 });
 
-console.log(result);
+const paymentUrl = getPaymentUrl(order);
+
+console.log(paymentUrl);
+
+const result = await kb.waitForPayment(
+  order.id,
+  {
+    password: order.password,
+  }
+);
+
+console.log(result.status);
 ```
+
+> **Important:** Each `createOrder()` call creates a new order. Redirect the customer to the URL from the same order you are monitoring.
 
 ---
 
-## Quick Start
+## Hosted Payment Page (HPP)
+
+See [Quick Start](#quick-start) for the full flow. Additional options:
 
 ```ts
-import { KapitalBank } from "kapital-bank-sdk";
+// Wait for a specific status instead
+const result = await kb.waitForStatus(
+  order.id,
+  "FullyPaid",
+  {
+    password: order.password,
+    interval: 5000,
+    timeout: 300000,
+  }
+);
 
-const kb = new KapitalBank({
-  username: "TerminalSys/kapital",
-  password: "kapital123",
-  environment: "test",
-});
+// Watch until any terminal status
+const result = await kb.watchOrder(
+  order.id,
+  {
+    password: order.password,
+  }
+);
+```
+
+### `getPaymentUrl()`
+
+The API returns a base `hppUrl`. Build the full redirect URL with:
+
+```ts
+import { getPaymentUrl } from "kapital-bank-sdk";
+
+const url = getPaymentUrl(order);
+// https://txpgtst.kapitalbank.az/flex?id=233294&password=...
 ```
 
 ---
@@ -75,10 +121,11 @@ const order = await kb.createOrder({
   currency: "AZN",
   language: "az",
   description: "SDK Test Order",
-  hppRedirectUrl: "https://example.com",
+  hppRedirectUrl: "https://your-site.com/callback",
 });
 
-console.log(order);
+console.log(order.id);
+console.log(getPaymentUrl(order));
 ```
 
 ---
@@ -86,10 +133,57 @@ console.log(order);
 ## Get Order Details
 
 ```ts
+// Basic
 const details = await kb.getOrder(order.id);
 
-console.log(details);
+// With order password and full transaction details (recommended after HPP)
+const details = await kb.getOrder(order.id, {
+  password: order.password,
+  tranDetailLevel: 2,
+  tokenDetailLevel: 2,
+  orderDetailLevel: 2,
+});
 ```
+
+---
+
+## Payment Monitoring
+
+```ts
+// Wait until paid, declined, or expired
+await kb.waitForPayment(order.id, {
+  password: order.password,
+  interval: 5000,
+  timeout: 300000,
+});
+
+// Wait until a specific status
+await kb.waitForStatus(order.id, "FullyPaid", {
+  password: order.password,
+});
+
+// Watch until any terminal status
+await kb.watchOrder(order.id, {
+  password: order.password,
+});
+```
+
+| Method | Description |
+| ------ | ----------- |
+| `waitForPayment(id, options?)` | Poll until `FullyPaid`, `Declined`, or `Expired` |
+| `waitForStatus(id, status, options?)` | Poll until the order reaches a specific status |
+| `watchOrder(id, options?)` | Poll until a terminal status is reached |
+
+`WatchOrderOptions`:
+
+| Option         | Default           | Description                                |
+| -------------- | ----------------- | ------------------------------------------ |
+| `password`     | —                 | Order password (recommended for HPP flows) |
+| `interval`     | `5000`            | Poll interval in ms                        |
+| `timeout`      | `300000`          | Max wait time in ms                        |
+| `stopStatuses` | terminal statuses | Statuses that stop polling                 |
+
+Throws `WatchOrderTimeoutError` when `timeout` is exceeded.
 
 ---
 
@@ -189,38 +283,6 @@ await kb.clear(order.id, "1.00");
 
 ---
 
-## Error Handling
-
-```ts
-import {
-  KapitalBankError,
-} from "kapital-bank-sdk";
-
-try {
-  await kb.executeTransaction(...);
-} catch (error) {
-  if (
-    error instanceof KapitalBankError
-  ) {
-    if (error.isDeclined()) {
-      console.log("Transaction declined");
-    }
-  }
-}
-```
-
-`KapitalBankError` provides helper methods for common API error codes:
-
-| Method                  | Error Code          |
-| ----------------------- | ------------------- |
-| `isDeclined()`          | `PmoDecline`        |
-| `isInvalidToken()`      | `InvalidToken`      |
-| `isInvalidOrderState()` | `InvalidOrderState` |
-| `isOrderNotFound()`     | `OrderNotFound`     |
-| `isSystemError()`       | `SystemError`       |
-
----
-
 ## Card Transfer (OCT)
 
 ```ts
@@ -251,6 +313,41 @@ The SDK automatically:
 
 ---
 
+## Error Handling
+
+```ts
+import { KapitalBankError, WatchOrderTimeoutError } from "kapital-bank-sdk";
+
+try {
+  await kb.waitForPayment(order.id, {
+    password: order.password,
+    timeout: 120000,
+  });
+} catch (error) {
+  if (error instanceof WatchOrderTimeoutError) {
+    console.log("Payment not completed in time");
+  }
+
+  if (error instanceof KapitalBankError) {
+    if (error.isDeclined()) {
+      console.log("Transaction declined");
+    }
+  }
+}
+```
+
+`KapitalBankError` provides helper methods for common API error codes:
+
+| Method                  | Error Code          |
+| ----------------------- | ------------------- |
+| `isDeclined()`          | `PmoDecline`        |
+| `isInvalidToken()`      | `InvalidToken`      |
+| `isInvalidOrderState()` | `InvalidOrderState` |
+| `isOrderNotFound()`     | `OrderNotFound`     |
+| `isSystemError()`       | `SystemError`       |
+
+---
+
 ## Supported Order Types
 
 ```ts
@@ -266,7 +363,7 @@ type OrderType =
 
 | Type      | Description                |
 | --------- | -------------------------- |
-| Order_SMS | Standard Purchase          |
+| Order_SMS | Standard Purchase (HPP)    |
 | Order_DMS | PreAuthorization           |
 | Order_REC | Recurring Payment          |
 | DMSN3D    | Recurring PreAuthorization |
@@ -290,6 +387,22 @@ Base URL:
 https://txpgtst.kapitalbank.az/api
 ```
 
+Test credentials:
+
+| Field    | Value                 |
+| -------- | --------------------- |
+| Username | `TerminalSys/kapital` |
+| Password | `kapital123`          |
+
+### Test Cards
+
+| PAN              | Exp Date | CVV | Notes                          |
+| ---------------- | -------- | --- | ------------------------------ |
+| 5239151747183468 | 11/27    | 602 | Use for HPP browser payments   |
+| 4169741330151778 | 06/25    | 119 | Expired — OCT/server-side only |
+
+> The `06/25` card may show "expired card" on HPP. Use `5239151747183468` for hosted payment page testing.
+
 ### Production
 
 ```ts
@@ -304,12 +417,38 @@ https://e-commerce.kapitalbank.az/api
 
 ---
 
+## Examples
+
+Clone the repo and run examples with `tsx`:
+
+```bash
+npm install
+```
+
+| Script               | Command                    | Description                              |
+| -------------------- | -------------------------- | ---------------------------------------- |
+| HPP payment URL      | `npm run hpp-payment`      | Create order and print payment URL       |
+| HPP wait for payment | `npm run hpp-wait`         | Create order, print URL, poll until paid |
+| Create order         | `npm run example`          | Basic order creation                     |
+| Wait for payment     | `npm run wait-for-payment` | Poll order status                        |
+| Watch order          | `npm run watch-order`      | Poll until terminal status               |
+| Get order            | `npm run get-order`        | Fetch order details                      |
+| Transfer to card     | `npm run transfer`         | OCT card transfer                        |
+| Recurring            | `npm run recurring`        | Recurring payment flow                   |
+| Preauthorize         | `npm run preauthorize`     | PreAuthorization flow                    |
+| Clear                | `npm run clear`            | Clearing flow                            |
+| Reverse              | `npm run reverse`          | Reverse transaction                      |
+| Error handling       | `npm run error-test`       | Error handling demo                      |
+
+---
+
 ## Roadmap
 
+- Event Emitter Support
+- Webhook/Event Integrations
 - Google Pay Support
 - Extended Test Coverage
 - Transaction Response Enhancements
-- v1.0 Stable Release
 
 ---
 

@@ -80,6 +80,7 @@ export interface OrderDetails {
 }
 
 export interface GetOrderDetailsOptions {
+  password?: string;
   tranDetailLevel?: 0 | 1 | 2;
   tokenDetailLevel?: 0 | 1 | 2;
   orderDetailLevel?: 0 | 1 | 2;

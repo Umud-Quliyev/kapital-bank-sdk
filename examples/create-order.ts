@@ -1,4 +1,7 @@
-import { KapitalBank } from "../src/KapitalBank";
+import {
+  KapitalBank,
+  getPaymentUrl,
+} from "../src";
 
 async function main() {
   const kb = new KapitalBank({
@@ -13,10 +16,14 @@ async function main() {
     currency: "AZN",
     language: "az",
     description: "SDK Test Order",
-    hppRedirectUrl: "https://example.com",
+    hppRedirectUrl: "https://example.com/callback",
   });
 
   console.log(order);
+  console.log(
+    "Payment URL:",
+    getPaymentUrl(order)
+  );
 }
 
 main().catch(console.error);
