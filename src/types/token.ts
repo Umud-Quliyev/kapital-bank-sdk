@@ -9,6 +9,10 @@ export interface SetSourceTokenRequest {
   storedId: number;
 }
 
+export interface SetGooglePayTokenRequest {
+  googlePayBlock: string;
+}
+
 export interface SourceTokenCard {
   expiration: string;
   brand: CardBrand;

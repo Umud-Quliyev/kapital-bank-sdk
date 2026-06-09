@@ -1,15 +1,20 @@
+import {
+  PaymentMethod,
+  CardBrand,
+} from "./enums";
+
 export interface SetDestinationTokenRequest {
   pan: string;
 }
 
 export interface DestinationTokenCard {
   expiration?: string;
-  brand?: string;
+  brand?: CardBrand;
 }
 
 export interface DestinationToken {
   id: number;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   role: string;
   status: string;
   regTime: string;

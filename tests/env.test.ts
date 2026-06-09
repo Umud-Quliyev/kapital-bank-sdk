@@ -61,6 +61,26 @@ describe("parseEnvConfig", () => {
       })
     ).toThrow('KAPITALBANK_MODE must be "test" or "production"');
   });
+
+  it("parses Google Pay order type default", () => {
+    const config = parseEnvConfig({
+      ...baseEnv,
+      KAPITALBANK_GOOGLE_PAY_ORDER_TYPE: "GN3D",
+    });
+
+    expect(config.defaults?.googlePayOrderType).toBe("GN3D");
+  });
+
+  it("throws for invalid Google Pay order type", () => {
+    expect(() =>
+      parseEnvConfig({
+        ...baseEnv,
+        KAPITALBANK_GOOGLE_PAY_ORDER_TYPE: "Order_SMS",
+      })
+    ).toThrow(
+      'KAPITALBANK_GOOGLE_PAY_ORDER_TYPE must be "GN3D" or "GSMS"'
+    );
+  });
 });
 
 describe("applyOrderDefaults", () => {

@@ -1,6 +1,6 @@
 {
   "name": "kapital-bank-sdk",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "TypeScript SDK for Kapital Bank payment services",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -28,7 +28,10 @@
     "from-env": "tsx examples/from-env.ts",
     "hosted-payment": "tsx examples/create-hosted-payment.ts",
     "payment-events": "tsx examples/payment-events.ts",
-    "restore-order": "tsx examples/restore-order.ts"
+    "restore-order": "tsx examples/restore-order.ts",
+    "google-pay-order": "tsx examples/google-pay-order.ts",
+    "google-pay-native": "tsx examples/google-pay-native.ts",
+    "google-pay-full-flow": "tsx examples/google-pay-full-flow.ts"
   },
   "keywords": [
     "kapital-bank",
@@ -43,6 +46,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
+    "dotenv": "^17.4.2",
     "tsup": "^8.5.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.2",

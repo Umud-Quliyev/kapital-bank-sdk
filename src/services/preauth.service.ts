@@ -23,9 +23,6 @@ export class PreAuthService {
         phase: "Auth",
         authorizationKind: "Preliminary",
         amount,
-        conditions: {
-          cofUsage: "Recurring",
-        },
       }
     );
   }

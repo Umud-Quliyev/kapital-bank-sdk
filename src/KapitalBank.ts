@@ -16,6 +16,7 @@ import { TransfersService } from "./services/transfers.service";
 import { PreAuthService } from "./services/preauth.service";
 import { ClearingService } from "./services/clearing.service";
 import { PaymentMonitorService } from "./services/payment-monitor.service";
+import { GooglePayService } from "./services/google-pay.service";
 
 import {
   TransferToCardRequest,
@@ -59,6 +60,7 @@ import {
 import { TokensService } from "./services/tokens.service";
 
 import {
+  SetGooglePayTokenRequest,
   SetSourceTokenRequest,
   SetSourceTokenResponse,
 } from "./types/token";
@@ -72,6 +74,15 @@ import {
   CreateHostedPaymentInput,
   HostedPaymentSession,
 } from "./types/hosted-payment";
+
+import {
+  CreateGooglePayOrderInput,
+  CreateGooglePayOrderResponse,
+  PayWithGooglePayInput,
+  PayWithGooglePayResponse,
+} from "./types/google-pay";
+
+import { resolveGooglePayOrderType } from "./utils/google-pay-defaults";
 
 import {
   RestoredPaymentSession,
@@ -132,6 +143,7 @@ export class KapitalBank extends EventEmitter {
   private readonly preAuthService: PreAuthService;
   private readonly clearingService: ClearingService;
   private readonly paymentMonitorService: PaymentMonitorService;
+  private readonly googlePayService: GooglePayService;
 
   constructor(config: KapitalBankConfig) {
     super();
@@ -160,6 +172,10 @@ export class KapitalBank extends EventEmitter {
     this.preAuthService = new PreAuthService(this.client);
     this.clearingService = new ClearingService(this.client);
     this.paymentMonitorService = new PaymentMonitorService(this.client);
+    this.googlePayService = new GooglePayService(
+      this.client,
+      this.orderDefaults
+    );
   }
 
   static fromEnv(
@@ -205,6 +221,46 @@ export class KapitalBank extends EventEmitter {
 
     this.emit("payment:created", session);
     return session;
+  }
+
+  async createGooglePayOrder(
+    payload: CreateGooglePayOrderInput
+  ): Promise<CreateGooglePayOrderResponse> {
+    const typeRid = resolveGooglePayOrderType(
+      payload.typeRid,
+      this.orderDefaults
+    );
+
+    const order = await this.ordersService.createOrder(
+      applyOrderDefaults(
+        { ...payload, typeRid },
+        this.orderDefaults
+      )
+    );
+
+    this.emit("order:created", order);
+    return order;
+  }
+
+
+  async setGooglePayToken(
+    orderId: number | string,
+    password: string,
+    payload: SetGooglePayTokenRequest
+  ): Promise<SetSourceTokenResponse> {
+    return this.tokensService.setGooglePayToken(
+      orderId,
+      password,
+      payload
+    );
+  }
+
+  async payWithGooglePay(
+    payload: PayWithGooglePayInput
+  ): Promise<PayWithGooglePayResponse> {
+    return this.googlePayService.payWithGooglePay(
+      payload
+    );
   }
 
   async restoreOrder(

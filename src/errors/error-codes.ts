@@ -3,6 +3,7 @@ export const ERROR_CODES = [
     "InvalidToken",
     "InvalidOrderState",
     "OrderNotFound",
+    "OrderTypeNotFound",
     "SystemError",
   ] as const;
   

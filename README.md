@@ -18,6 +18,7 @@ npm install kapital-bank-sdk
 - Environment-based configuration with `KapitalBank.fromEnv()`
 - Default order settings from config or environment variables
 - `createHostedPayment()` — one-call HPP session (`orderId`, `password`, `paymentUrl`, `order`)
+- Google Pay via `GN3D` / `GSMS` — `createGooglePayOrder()`, `setGooglePayToken()`, `payWithGooglePay()`
 - `restoreOrder()` — resume an unfinished HPP order in `Preparing` status
 - Order status helpers (`isPreparing`, `isFullyPaid`, and more)
 - Low-level `request()` escape hatch for undocumented API endpoints
@@ -43,17 +44,27 @@ Create an order, open the payment page, wait until the customer pays.
 
 ### Option A — Environment Variables
 
+Copy the template and edit your credentials:
+
+```bash
+cp .env.example .env   # Linux/macOS
+copy .env.example .env # Windows
+```
+
 ```env
 KAPITALBANK_MODE=test
 KAPITALBANK_USERNAME=TerminalSys/kapital
 KAPITALBANK_PASSWORD=kapital123
 
 KAPITALBANK_ORDER_TYPE=Order_SMS
+KAPITALBANK_GOOGLE_PAY_ORDER_TYPE=GSMS
 KAPITALBANK_CURRENCY=AZN
 KAPITALBANK_LANGUAGE=az
 KAPITALBANK_REDIRECT_URL=https://your-site.com/callback
 KAPITALBANK_LOG_ENABLED=true
 ```
+
+Examples load `.env` automatically via `examples/client.ts`.
 
 ```ts
 import { KapitalBank } from "kapital-bank-sdk";
@@ -67,10 +78,9 @@ const session = await kb.createHostedPayment({
 
 console.log(session.paymentUrl);
 
-const result = await kb.waitForPayment(
-  session.orderId,
-  { password: session.password }
-);
+const result = await kb.waitForPayment(session.orderId, {
+  password: session.password,
+});
 ```
 
 When env defaults are set, `createOrder()` and `createHostedPayment()` apply `typeRid`, `currency`, `language`, and `hppRedirectUrl` automatically.
@@ -78,10 +88,7 @@ When env defaults are set, `createOrder()` and `createHostedPayment()` apply `ty
 ### Option B — Constructor Config
 
 ```ts
-import {
-  KapitalBank,
-  getPaymentUrl,
-} from "kapital-bank-sdk";
+import { KapitalBank, getPaymentUrl } from "kapital-bank-sdk";
 
 const kb = new KapitalBank({
   username: "TerminalSys/kapital",
@@ -106,17 +113,173 @@ const paymentUrl = getPaymentUrl(order);
 
 console.log(paymentUrl);
 
-const result = await kb.waitForPayment(
-  order.id,
-  {
-    password: order.password,
-  }
-);
+const result = await kb.waitForPayment(order.id, {
+  password: order.password,
+});
 
 console.log(result.status);
 ```
 
 > **Important:** Each `createOrder()` call creates a new order. Redirect the customer to the URL from the same order you are monitoring.
+
+---
+
+## Google Pay
+
+Kapital Bank Google Pay uses dedicated order types on the same `POST /order` endpoint:
+
+| Type   | Description                   | Auth method            |
+| ------ | ----------------------------- | ---------------------- |
+| `GSMS` | Google Pay purchase (default) | `PAN_ONLY` cards       |
+| `GN3D` | Google Pay with 3D Secure     | `CRYPTOGRAM_3DS` cards |
+
+Your curator may configure different `typeRid` mappings per terminal. Contact Kapital Bank to enable Google Pay on your merchant login.
+
+### Payment Flow
+
+Google Pay uses a token-based server-side flow (not HPP):
+
+```
+Google Pay Button (Frontend)
+        ↓
+createGooglePayOrder() (Backend)
+        ↓
+Customer pays via Google Pay API
+        ↓
+Receive payment token JSON
+        ↓
+encodeGooglePayToken() - Convert to HEX
+        ↓
+setGooglePayToken() - Set token on order
+        ↓
+executeTransaction() - Process payment
+        ↓
+waitForPayment() - Monitor status (optional)
+```
+
+### Quick Start (One-Call)
+
+The simplest way to process Google Pay:
+
+```ts
+import {
+  KapitalBank,
+  encodeGooglePayToken,
+  GOOGLE_PAY_GATEWAY,
+} from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+// Configure Google Pay on your frontend with:
+const gatewayConfig = {
+  gateway: GOOGLE_PAY_GATEWAY.gateway,
+  gatewayMerchantId: GOOGLE_PAY_GATEWAY.testGatewayMerchantId,
+};
+
+// After customer pays, encode the token JSON to HEX:
+const googlePayBlock = encodeGooglePayToken(googlePayTokenJson);
+
+// Process payment in one call:
+const result = await kb.payWithGooglePay({
+  amount: "10",
+  description: "Google Pay Test",
+  googlePayBlock,
+});
+
+console.log("Order ID:", result.orderId);
+console.log("Approval Code:", result.transaction.approvalCode);
+```
+
+### Advanced Flow (Step-by-Step)
+
+For more control over the payment process:
+
+```ts
+import {
+  KapitalBank,
+  encodeGooglePayToken,
+} from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+// 1. Create Google Pay order
+const order = await kb.createGooglePayOrder({
+  amount: "10",
+  description: "Google Pay Test",
+  typeRid: "GSMS", // or "GN3D" for 3D Secure
+});
+
+console.log("Order ID:", order.id);
+
+// 2. Customer pays via Google Pay API on your frontend
+//    Receive payment token JSON: paymentData.paymentMethodData.tokenizationData.token
+
+// 3. Encode token to HEX
+const googlePayBlock = encodeGooglePayToken(googlePayTokenJson);
+
+// 4. Set the Google Pay token on the order
+await kb.setGooglePayToken(order.id, order.password, {
+  googlePayBlock,
+});
+
+// 5. Execute the transaction
+const transaction = await kb.executeTransaction(order.id, {
+  phase: "Single",
+});
+
+console.log("Transaction:", transaction);
+
+// 6. Optionally wait for payment completion
+const result = await kb.waitForPayment(order.id, {
+  password: order.password,
+});
+
+console.log("Final status:", result.status);
+```
+
+### Order Creation Only
+
+If you need just the order (e.g., for custom token handling):
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+const order = await kb.createGooglePayOrder({
+  amount: "10",
+  description: "Google Pay Test",
+});
+
+console.log("Order ID:", order.id);
+console.log("Password:", order.password);
+```
+
+
+### Environment Configuration
+
+```env
+KAPITALBANK_GOOGLE_PAY_ORDER_TYPE=GSMS
+KAPITALBANK_CURRENCY=AZN
+KAPITALBANK_LANGUAGE=az
+KAPITALBANK_REDIRECT_URL=https://your-site.com/callback
+```
+
+Or via constructor:
+
+```ts
+const kb = new KapitalBank({
+  username: process.env.KAPITALBANK_USERNAME!,
+  password: process.env.KAPITALBANK_PASSWORD!,
+  environment: "test",
+  defaults: {
+    googlePayOrderType: "GSMS",
+    currency: "AZN",
+    language: "az",
+    hppRedirectUrl: "https://your-site.com/callback",
+  },
+});
+```
 
 ---
 
@@ -127,10 +290,7 @@ Kapital Bank does not expose a separate "restore" HTTP endpoint. An unfinished H
 `restoreOrder()` validates the status and returns a ready-to-redirect session:
 
 ```ts
-import {
-  KapitalBank,
-  isPreparing,
-} from "kapital-bank-sdk";
+import { KapitalBank, isPreparing } from "kapital-bank-sdk";
 
 const kb = KapitalBank.fromEnv();
 
@@ -139,10 +299,7 @@ const details = await kb.getOrder(orderId, {
 });
 
 if (isPreparing(details)) {
-  const session = await kb.restoreOrder(
-    orderId,
-    password
-  );
+  const session = await kb.restoreOrder(orderId, password);
 
   console.log(session.paymentUrl);
 }
@@ -182,7 +339,7 @@ const response = await kb.request<{ order: OrderDetails }>(
   "GET",
   `/order/${orderId}`,
   undefined,
-  { params: { password } }
+  { params: { password } },
 );
 ```
 
@@ -200,31 +357,21 @@ const session = await kb.createHostedPayment({
   description: "Order",
 });
 
-// { orderId, password, paymentUrl, order }
 console.log(session.order.status);
 ```
 
 See [Quick Start](#quick-start) for the full flow. Additional options:
 
 ```ts
-// Wait for a specific status instead
-const result = await kb.waitForStatus(
-  order.id,
-  "FullyPaid",
-  {
-    password: order.password,
-    interval: 5000,
-    timeout: 300000,
-  }
-);
+const result = await kb.waitForStatus(order.id, "FullyPaid", {
+  password: order.password,
+  interval: 5000,
+  timeout: 300000,
+});
 
-// Watch until any terminal status
-const result = await kb.watchOrder(
-  order.id,
-  {
-    password: order.password,
-  }
-);
+const result = await kb.watchOrder(order.id, {
+  password: order.password,
+});
 ```
 
 ### `getPaymentUrl()`
@@ -244,17 +391,18 @@ const url = getPaymentUrl(order);
 
 ### Environment Variables
 
-| Variable | Required | Description |
-| -------- | -------- | ----------- |
-| `KAPITALBANK_USERNAME` | Yes | API username |
-| `KAPITALBANK_PASSWORD` | Yes | API password |
-| `KAPITALBANK_MODE` | No | `test` or `production` (default: `test`) |
-| `KAPITALBANK_TIMEOUT` | No | HTTP timeout in milliseconds |
-| `KAPITALBANK_ORDER_TYPE` | No | Default order type (e.g. `Order_SMS`) |
-| `KAPITALBANK_CURRENCY` | No | Default order currency (`AZN`, `USD`, `EUR`) |
-| `KAPITALBANK_LANGUAGE` | No | Default order language (`az`, `en`, `ru`) |
-| `KAPITALBANK_REDIRECT_URL` | No | Default `hppRedirectUrl` for HPP orders |
-| `KAPITALBANK_LOG_ENABLED` | No | Log HTTP requests (`true` / `false`) |
+| Variable                            | Required | Description                                  |
+| ----------------------------------- | -------- | -------------------------------------------- |
+| `KAPITALBANK_USERNAME`              | Yes      | API username                                 |
+| `KAPITALBANK_PASSWORD`              | Yes      | API password                                 |
+| `KAPITALBANK_MODE`                  | No       | `test` or `production` (default: `test`)     |
+| `KAPITALBANK_TIMEOUT`               | No       | HTTP timeout in milliseconds                 |
+| `KAPITALBANK_ORDER_TYPE`            | No       | Default order type (e.g. `Order_SMS`)        |
+| `KAPITALBANK_GOOGLE_PAY_ORDER_TYPE` | No       | Default Google Pay type: `GSMS` or `GN3D`    |
+| `KAPITALBANK_CURRENCY`              | No       | Default order currency (`AZN`, `USD`, `EUR`) |
+| `KAPITALBANK_LANGUAGE`              | No       | Default order language (`az`, `en`, `ru`)    |
+| `KAPITALBANK_REDIRECT_URL`          | No       | Default `hppRedirectUrl` for HPP orders      |
+| `KAPITALBANK_LOG_ENABLED`           | No       | Log HTTP requests (`true` / `false`)         |
 
 ```ts
 import { KapitalBank } from "kapital-bank-sdk";
@@ -265,10 +413,7 @@ const kb = KapitalBank.fromEnv();
 You can also parse env vars manually:
 
 ```ts
-import {
-  KapitalBank,
-  parseEnvConfig,
-} from "kapital-bank-sdk";
+import { KapitalBank, parseEnvConfig } from "kapital-bank-sdk";
 
 const kb = new KapitalBank(parseEnvConfig());
 ```
@@ -331,16 +476,16 @@ await kb.waitForPayment(session.orderId, {
 });
 ```
 
-| Event | When |
-| ----- | ---- |
-| `order:created` | After `createOrder()` |
-| `payment:created` | After `createHostedPayment()` |
-| `payment:status` | On each poll during monitoring |
-| `payment:paid` | Order reaches `FullyPaid` |
-| `payment:declined` | Order reaches `Declined` |
-| `payment:expired` | Order reaches `Expired` |
-| `payment:refunded` | Order reaches `Refunded` |
-| `payment:reversed` | Order reaches `Reversed` |
+| Event              | When                                                        |
+| ------------------ | ----------------------------------------------------------- |
+| `order:created`    | After `createOrder()`                                       |
+| `payment:created`  | After `createHostedPayment()` |
+| `payment:status`   | On each poll during monitoring                              |
+| `payment:paid`     | Order reaches `FullyPaid`                                   |
+| `payment:declined` | Order reaches `Declined`                                    |
+| `payment:expired`  | Order reaches `Expired`                                     |
+| `payment:refunded` | Order reaches `Refunded`                                    |
+| `payment:reversed` | Order reaches `Reversed`                                    |
 
 Ideal for Telegram bots, Discord bots, n8n workflows, and WebSocket bridges.
 
@@ -365,10 +510,8 @@ You can still pass `typeRid`, `currency`, `language`, and `hppRedirectUrl` per o
 ## Get Order Details
 
 ```ts
-// Basic
 const details = await kb.getOrder(order.id);
 
-// With order password and full transaction details (recommended after HPP)
 const details = await kb.getOrder(order.id, {
   password: order.password,
   tranDetailLevel: 2,
@@ -382,29 +525,26 @@ const details = await kb.getOrder(order.id, {
 ## Payment Monitoring
 
 ```ts
-// Wait until paid, declined, or expired
 await kb.waitForPayment(order.id, {
   password: order.password,
   interval: 5000,
   timeout: 300000,
 });
 
-// Wait until a specific status
 await kb.waitForStatus(order.id, "FullyPaid", {
   password: order.password,
 });
 
-// Watch until any terminal status
 await kb.watchOrder(order.id, {
   password: order.password,
 });
 ```
 
-| Method | Description |
-| ------ | ----------- |
-| `waitForPayment(id, options?)` | Poll until `FullyPaid`, `Declined`, or `Expired` |
-| `waitForStatus(id, status, options?)` | Poll until the order reaches a specific status |
-| `watchOrder(id, options?)` | Poll until a terminal status is reached |
+| Method                                | Description                                      |
+| ------------------------------------- | ------------------------------------------------ |
+| `waitForPayment(id, options?)`        | Poll until `FullyPaid`, `Declined`, or `Expired` |
+| `waitForStatus(id, status, options?)` | Poll until the order reaches a specific status   |
+| `watchOrder(id, options?)`            | Poll until a terminal status is reached          |
 
 `WatchOrderOptions`:
 
@@ -657,31 +797,34 @@ Clone the repo and run examples with `tsx`:
 npm install
 ```
 
-| Script               | Command                    | Description                              |
-| -------------------- | -------------------------- | ---------------------------------------- |
-| From env             | `npm run from-env`         | Create order using environment variables |
-| Hosted payment       | `npm run hosted-payment`   | `createHostedPayment()` demo             |
-| Restore order        | `npm run restore-order`    | Resume a preparing HPP order             |
-| Payment events       | `npm run payment-events`   | EventEmitter + wait for payment          |
-| HPP payment URL      | `npm run hpp-payment`      | Create order and print payment URL       |
-| HPP wait for payment | `npm run hpp-wait`         | Create order, print URL, poll until paid |
-| Create order         | `npm run example`          | Basic order creation                     |
-| Wait for payment     | `npm run wait-for-payment` | Poll order status                        |
-| Watch order          | `npm run watch-order`      | Poll until terminal status               |
-| Get order            | `npm run get-order`        | Fetch order details                      |
-| Transfer to card     | `npm run transfer`         | OCT card transfer                        |
-| Recurring            | `npm run recurring`        | Recurring payment flow                   |
-| Preauthorize         | `npm run preauthorize`     | PreAuthorization flow                    |
-| Clear                | `npm run clear`            | Clearing flow                            |
-| Reverse              | `npm run reverse`          | Reverse transaction                      |
-| Error handling       | `npm run error-test`       | Error handling demo                      |
+| Script               | Command                      | Description                              |
+| -------------------- | ---------------------------- | ---------------------------------------- |
+| From env             | `npm run from-env`           | Create order using environment variables |
+| Hosted payment       | `npm run hosted-payment`     | `createHostedPayment()` demo             |
+| Restore order        | `npm run restore-order`      | Resume a preparing HPP order             |
+| Google Pay order     | `npm run google-pay-order`   | Create a Google Pay order                |
+| Google Pay native    | `npm run google-pay-native`  | Token-based Google Pay flow              |
+| Google Pay full flow | `npm run google-pay-full-flow` | End-to-end Google Pay with monitoring   |
+| Payment events       | `npm run payment-events`     | EventEmitter + wait for payment          |
+| HPP payment URL      | `npm run hpp-payment`        | Create order and print payment URL       |
+| HPP wait for payment | `npm run hpp-wait`           | Create order, print URL, poll until paid |
+| Create order         | `npm run example`            | Basic order creation                     |
+| Wait for payment     | `npm run wait-for-payment`   | Poll order status                        |
+| Watch order          | `npm run watch-order`        | Poll until terminal status               |
+| Get order            | `npm run get-order`          | Fetch order details                      |
+| Transfer to card     | `npm run transfer`           | OCT card transfer                        |
+| Recurring            | `npm run recurring`          | Recurring payment flow                   |
+| Preauthorize         | `npm run preauthorize`       | PreAuthorization flow                    |
+| Clear                | `npm run clear`              | Clearing flow                            |
+| Reverse              | `npm run reverse`            | Reverse transaction                      |
+| Error handling       | `npm run error-test`         | Error handling demo                      |
 
 ---
 
 ## Roadmap
 
 - Webhook/Event Integrations
-- Google Pay Support
+- Apple Pay Support
 - Extended Test Coverage
 - Transaction Response Enhancements
 

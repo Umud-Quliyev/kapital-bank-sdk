@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-09
+
+### Added
+
+- `createGooglePayOrder()` — create Google Pay orders with `GN3D` or `GSMS` type (defaults to `GSMS`)
+- `setGooglePayToken()` — submit Google Pay payment token (`googlePayBlock` in HEX) via Set Source Token
+- `payWithGooglePay()` — full native flow: create order → set token → execute transaction
+- `encodeGooglePayToken()` and `GOOGLE_PAY_GATEWAY` constants for client-side integration
+- `GooglePayOrderType`, `CreateGooglePayOrderInput`, `PayWithGooglePayInput`, and related types
+- `KAPITALBANK_GOOGLE_PAY_ORDER_TYPE` env var and `defaults.googlePayOrderType` config option
+- `isValidGooglePayOrderType()` and `resolveGooglePayOrderType()` helpers
+- Examples: `google-pay-order`, `google-pay-native`, `google-pay-full-flow`
+- Test suite expansion: Google Pay order, token flow, events, and env parsing
+
+### Changed
+
+- README updated with Google Pay overview, payment flow diagram, quick start, advanced flow, and configuration
+- `PaymentMethod` enum already includes `GooglePay` for order detail responses
+
+### Removed
+
+- `createGooglePaySession()` — Google Pay uses token-based flow, not HPP sessions
+- `CreateGooglePaySessionInput` and `GooglePaySession` types
+- Examples: `google-pay-session`, `google-pay-monitor`
+- Tests: `google-pay-session.test.ts`
+
 ## [1.2.0] - 2026-06-09
 
 ### Added
@@ -57,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Typed `KapitalBankError` with error code helpers
 - ESM and CommonJS builds with TypeScript declarations
 
+[1.3.0]: https://github.com/Umud-Quliyev/kapital-bank-sdk/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Umud-Quliyev/kapital-bank-sdk/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Umud-Quliyev/kapital-bank-sdk/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Umud-Quliyev/kapital-bank-sdk/releases/tag/v1.0.0

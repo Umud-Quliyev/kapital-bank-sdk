@@ -4,6 +4,7 @@ import {
   KapitalBankOrderDefaults,
 } from "../types/config";
 import { Currency, Language } from "../types/enums";
+import { isValidGooglePayOrderType } from "../utils/google-pay-defaults";
 import { isValidOrderType } from "../utils/order-defaults";
 
 const ENV_PREFIX = "KAPITALBANK_";
@@ -82,10 +83,24 @@ function parseOrderType(value: string) {
   );
 }
 
+function parseGooglePayOrderType(value: string) {
+  if (isValidGooglePayOrderType(value)) {
+    return value;
+  }
+
+  throw new Error(
+    `KAPITALBANK_GOOGLE_PAY_ORDER_TYPE must be "GN3D" or "GSMS", received "${value}"`
+  );
+}
+
 function parseOrderDefaults(
   env: NodeJS.ProcessEnv
 ): KapitalBankOrderDefaults | undefined {
   const typeRid = readEnv(env, "ORDER_TYPE");
+  const googlePayOrderType = readEnv(
+    env,
+    "GOOGLE_PAY_ORDER_TYPE"
+  );
   const currency = readEnv(env, "CURRENCY");
   const language = readEnv(env, "LANGUAGE");
   const hppRedirectUrl = readEnv(env, "REDIRECT_URL");
@@ -94,6 +109,11 @@ function parseOrderDefaults(
 
   if (typeRid !== undefined) {
     defaults.typeRid = parseOrderType(typeRid);
+  }
+
+  if (googlePayOrderType !== undefined) {
+    defaults.googlePayOrderType =
+      parseGooglePayOrderType(googlePayOrderType);
   }
 
   if (currency !== undefined) {
