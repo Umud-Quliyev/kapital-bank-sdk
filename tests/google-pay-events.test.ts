@@ -27,15 +27,6 @@ vi.mock("axios", () => ({
 
 import { KapitalBank } from "../src";
 
-const googlePayOrder = {
-  id: 233302,
-  hppUrl: "https://txpgtst.kapitalbank.az/flex",
-  password: "gp-events-password",
-  secret: "gp-events-secret",
-  status: "Preparing" as const,
-  cvv2AuthStatus: "Required" as const,
-};
-
 const paidDetails = {
   id: 233302,
   status: "FullyPaid" as const,
@@ -76,9 +67,6 @@ describe("Google Pay payment events", () => {
   beforeEach(() => {
     httpMocks.post.mockReset();
     httpMocks.get.mockReset();
-    httpMocks.post.mockResolvedValue({
-      data: { order: googlePayOrder },
-    });
   });
 
   it("emits payment:paid when Google Pay order is paid", async () => {
@@ -126,7 +114,7 @@ describe("Google Pay payment events", () => {
     expect(expiredHandler).toHaveBeenCalledWith(expiredDetails);
   });
 
-  it("watchOrder works for Google Pay sessions", async () => {
+  it("watchOrder works for Google Pay orders", async () => {
     httpMocks.get.mockResolvedValue({
       data: { order: paidDetails },
     });
