@@ -3,6 +3,7 @@
 ![npm](https://img.shields.io/npm/v/kapital-bank-sdk)
 ![license](https://img.shields.io/npm/l/kapital-bank-sdk)
 ![typescript](https://img.shields.io/badge/TypeScript-Ready-blue)
+![downloads](https://img.shields.io/npm/dm/kapital-bank-sdk)
 
 TypeScript SDK for Kapital Bank Payment Gateway API.
 ## Installation
