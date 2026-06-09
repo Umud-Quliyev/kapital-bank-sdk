@@ -6,6 +6,7 @@ Production-ready TypeScript SDK for Kapital Bank Payment Gateway.
 [![npm downloads](https://img.shields.io/npm/dm/kapital-bank-sdk.svg)](https://www.npmjs.com/package/kapital-bank-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/npm/l/kapital-bank-sdk)](LICENSE)
+[![CI](https://github.com/Umud-Quliyev/kapital-bank-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/Umud-Quliyev/kapital-bank-sdk/actions/workflows/ci.yml)
 
 Accept card payments, Google Pay transactions, webhooks, notifications, monitoring, and hosted payment flows using a modern TypeScript SDK.
 
