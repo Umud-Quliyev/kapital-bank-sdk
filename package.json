@@ -1,6 +1,6 @@
 {
   "name": "kapital-bank-sdk",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "TypeScript SDK for Kapital Bank payment services",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -31,7 +31,15 @@
     "restore-order": "tsx examples/restore-order.ts",
     "google-pay-order": "tsx examples/google-pay-order.ts",
     "google-pay-native": "tsx examples/google-pay-native.ts",
-    "google-pay-full-flow": "tsx examples/google-pay-full-flow.ts"
+    "google-pay-full-flow": "tsx examples/google-pay-full-flow.ts",
+    "webhook": "tsx examples/webhook-handler.ts",
+    "telegram": "tsx examples/telegram-notifications.ts",
+    "discord": "tsx examples/discord-notifications.ts",
+    "retry": "tsx examples/retry-system.ts",
+    "health": "tsx examples/health-check.ts",
+    "monitoring": "tsx examples/monitoring.ts",
+    "test-new-features": "tsx examples/test-new-features.ts",
+    "test-security-fixes": "tsx examples/test-security-fixes.ts"
   },
   "keywords": [
     "kapital-bank",

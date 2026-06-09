@@ -36,6 +36,11 @@ npm install kapital-bank-sdk
 - Typed Error Handling (`KapitalBankError`, `WatchOrderTimeoutError`)
 - Full TypeScript Support
 - ESM & CommonJS Support
+- Webhook Handler with signature verification
+- Notification Services (Telegram, Discord)
+- Automatic Retry with Exponential Backoff
+- Health Check & API Monitoring
+- Metrics & Performance Tracking
 
 ---
 
@@ -171,16 +176,13 @@ import {
 
 const kb = KapitalBank.fromEnv();
 
-// Configure Google Pay on your frontend with:
 const gatewayConfig = {
   gateway: GOOGLE_PAY_GATEWAY.gateway,
   gatewayMerchantId: GOOGLE_PAY_GATEWAY.testGatewayMerchantId,
 };
 
-// After customer pays, encode the token JSON to HEX:
 const googlePayBlock = encodeGooglePayToken(googlePayTokenJson);
 
-// Process payment in one call:
 const result = await kb.payWithGooglePay({
   amount: "10",
   description: "Google Pay Test",
@@ -203,34 +205,26 @@ import {
 
 const kb = KapitalBank.fromEnv();
 
-// 1. Create Google Pay order
 const order = await kb.createGooglePayOrder({
   amount: "10",
   description: "Google Pay Test",
-  typeRid: "GSMS", // or "GN3D" for 3D Secure
+  typeRid: "GSMS",
 });
 
 console.log("Order ID:", order.id);
 
-// 2. Customer pays via Google Pay API on your frontend
-//    Receive payment token JSON: paymentData.paymentMethodData.tokenizationData.token
-
-// 3. Encode token to HEX
 const googlePayBlock = encodeGooglePayToken(googlePayTokenJson);
 
-// 4. Set the Google Pay token on the order
 await kb.setGooglePayToken(order.id, order.password, {
   googlePayBlock,
 });
 
-// 5. Execute the transaction
 const transaction = await kb.executeTransaction(order.id, {
   phase: "Single",
 });
 
 console.log("Transaction:", transaction);
 
-// 6. Optionally wait for payment completion
 const result = await kb.waitForPayment(order.id, {
   password: order.password,
 });
@@ -324,9 +318,7 @@ import {
   isReversed,
 } from "kapital-bank-sdk";
 
-if (isFullyPaid(order)) {
-  // fulfill order
-}
+if (isFullyPaid(order)) {}
 ```
 
 ---
@@ -383,7 +375,6 @@ The API returns a base `hppUrl`. Build the full redirect URL with:
 import { getPaymentUrl } from "kapital-bank-sdk";
 
 const url = getPaymentUrl(order);
-// https://txpgtst.kapitalbank.az/flex?id=233294&password=...
 ```
 
 ---
@@ -819,15 +810,247 @@ npm install
 | Clear                | `npm run clear`              | Clearing flow                            |
 | Reverse              | `npm run reverse`            | Reverse transaction                      |
 | Error handling       | `npm run error-test`         | Error handling demo                      |
+| Webhook handler      | `npm run webhook`            | Webhook handling example                 |
+| Telegram             | `npm run telegram`            | Telegram notifications example            |
+| Discord              | `npm run discord`             | Discord notifications example             |
+| Retry system         | `npm run retry`              | Retry with backoff example               |
+| Health check         | `npm run health`              | Health check example                     |
+| Monitoring           | `npm run monitoring`          | Metrics and monitoring example           |
+
+---
+
+## Production Guides
+
+### Webhook Handler
+
+Handle webhooks from Kapital Bank to receive real-time payment updates:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = new KapitalBank({
+  username: process.env.KAPITALBANK_USERNAME!,
+  password: process.env.KAPITALBANK_PASSWORD!,
+  environment: "production",
+  webhook: {
+    secret: process.env.WEBHOOK_SECRET!,
+    allowedIps: ["195.20.100.1", "195.20.100.2"],
+  },
+});
+
+const isValid = kb.verifyWebhookSignature(
+  rawBody,
+  signature,
+  webhookSecret
+);
+
+if (isValid.valid) {
+  const payload = kb.parseWebhookPayload(rawBody);
+  await kb.handleWebhook(payload, {
+    onPaymentPaid: async (order) => {},
+    onPaymentDeclined: async (order) => {},
+  });
+}
+```
+
+**Security Features**:
+- HMAC-SHA256 signature verification with timing-safe comparison
+- IP filtering (denies by default if not configured)
+- Password-based order verification (recommended over orderId)
+- JSON parsing with error handling
+
+### Notification Services
+
+Send automatic notifications to Telegram or Discord when payment events occur:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = new KapitalBank({
+  username: process.env.KAPITALBANK_USERNAME!,
+  password: process.env.KAPITALBANK_PASSWORD!,
+  environment: "production",
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN!,
+    chatId: process.env.TELEGRAM_CHAT_ID!,
+    customMessages: {
+      paid: "Payment {orderId} for {amount} {currency} has been paid!",
+      declined: "Payment {orderId} for {amount} {currency} was declined.",
+    },
+    enabledEvents: {
+      paid: true,
+      declined: true,
+      expired: false,
+      refunded: false,
+      reversed: false,
+    },
+  },
+  discord: {
+    webhookUrl: process.env.DISCORD_WEBHOOK_URL!,
+    customMessages: {
+      paid: "Payment {orderId} for {amount} {currency} has been paid!",
+    },
+  },
+});
+
+const session = await kb.createHostedPayment({
+  amount: "100",
+  description: "Order",
+});
+
+await kb.waitForPayment(session.orderId, {
+  password: session.password,
+});
+```
+
+Or use environment variables:
+
+```env
+KAPITALBANK_TELEGRAM_BOT_TOKEN=your-bot-token
+KAPITALBANK_TELEGRAM_CHAT_ID=your-chat-id
+KAPITALBANK_TELEGRAM_MESSAGE_PAID=Payment {orderId} for {amount} {currency} has been paid!
+KAPITALBANK_TELEGRAM_ENABLE_PAID=true
+KAPITALBANK_TELEGRAM_ENABLE_DECLINED=true
+KAPITALBANK_TELEGRAM_ENABLE_EXPIRED=false
+```
+
+Then simply:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+```
+
+**Security Note**: By default, only terminal payment events (paid, declined, expired) send notifications. Non-terminal events (refunded, reversed) are disabled to prevent notification spam.
+
+### Retry System
+
+Configure automatic retry with exponential backoff for failed requests:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = new KapitalBank({
+  username: process.env.KAPITALBANK_USERNAME!,
+  password: process.env.KAPITALBANK_PASSWORD!,
+  environment: "production",
+  retry: {
+    maxAttempts: 3,
+    initialDelay: 1000,
+    maxDelay: 30000,
+    backoffMultiplier: 2,
+    retryableErrors: ["ECONNRESET", "ETIMEDOUT"],
+    onRetry: (attempt, error) => {
+      console.log(`Retry ${attempt}:`, error.message);
+    },
+  },
+});
+```
+
+### Health Check
+
+Monitor API health and availability:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+const health = await kb.healthCheck();
+console.log("Healthy:", health.healthy);
+console.log("Latency:", health.latency, "ms");
+
+const health = await kb.healthCheckWithTimeout(5000);
+
+setInterval(async () => {
+  const health = await kb.healthCheck();
+  if (!health.healthy) {}
+}, 30000);
+```
+
+### Monitoring
+
+Track API performance and metrics:
+
+```ts
+import { KapitalBank } from "kapital-bank-sdk";
+
+const kb = KapitalBank.fromEnv();
+
+const metrics = kb.getMonitoringMetrics();
+console.log("Total requests:", metrics.totalRequests);
+console.log("Success rate:", metrics.successRate, "%");
+console.log("Average latency:", metrics.averageLatency, "ms");
+
+kb.clearMonitoringMetrics();
+```
+
+### Environment Variables
+
+Add these to your production environment:
+
+```env
+# Kapital Bank API
+KAPITALBANK_MODE=production
+KAPITALBANK_USERNAME=your-username
+KAPITALBANK_PASSWORD=your-password
+
+# Webhook
+KAPITALBANK_WEBHOOK_SECRET=your-webhook-secret
+KAPITALBANK_WEBHOOK_PATH=/webhook
+KAPITALBANK_WEBHOOK_ALLOWED_IPS=195.20.100.1,195.20.100.2
+
+# Telegram
+KAPITALBANK_TELEGRAM_BOT_TOKEN=your-bot-token
+KAPITALBANK_TELEGRAM_CHAT_ID=your-chat-id
+KAPITALBANK_TELEGRAM_PARSE_MODE=Markdown
+KAPITALBANK_TELEGRAM_MESSAGE_PAID=Payment {orderId} for {amount} {currency} has been paid!
+KAPITALBANK_TELEGRAM_MESSAGE_DECLINED=Payment {orderId} for {amount} {currency} was declined.
+KAPITALBANK_TELEGRAM_ENABLE_PAID=true
+KAPITALBANK_TELEGRAM_ENABLE_DECLINED=true
+KAPITALBANK_TELEGRAM_ENABLE_EXPIRED=true
+
+# Discord
+KAPITALBANK_DISCORD_WEBHOOK_URL=your-webhook-url
+KAPITALBANK_DISCORD_USERNAME=Kapital Bank Bot
+KAPITALBANK_DISCORD_MESSAGE_PAID=Payment {orderId} for {amount} {currency} has been paid!
+KAPITALBANK_DISCORD_ENABLE_PAID=true
+KAPITALBANK_DISCORD_ENABLE_DECLINED=true
+
+# Retry
+KAPITALBANK_RETRY_MAX_ATTEMPTS=3
+KAPITALBANK_RETRY_INITIAL_DELAY=1000
+KAPITALBANK_RETRY_MAX_DELAY=30000
+KAPITALBANK_RETRY_BACKOFF_MULTIPLIER=2
+KAPITALBANK_RETRY_RETRYABLE_ERRORS=ECONNRESET,ETIMEDOUT
+```
+
+**Security Notes**:
+- Always use environment variables for sensitive credentials
+- Webhook IP filtering denies by default - configure allowed IPs explicitly
+- Retry is limited to max 10 attempts to prevent API abuse
+- Notification event toggles prevent spam - disable non-terminal events by default
+
+### Best Practices
+
+1. **Use environment variables** for sensitive credentials
+2. **Enable retry** in production to handle transient failures
+3. **Set up health checks** to monitor API availability
+4. **Configure notifications** to stay informed about payment events
+5. **Monitor metrics** to track performance and identify issues
+6. **Use webhooks** for real-time payment updates instead of polling
+7. **Test in sandbox** before deploying to production
+8. **Keep SDK updated** to receive security patches and new features
 
 ---
 
 ## Roadmap
 
-- Webhook/Event Integrations
 - Apple Pay Support
 - Extended Test Coverage
 - Transaction Response Enhancements
+- SMS Notification Support
 
 ---
 

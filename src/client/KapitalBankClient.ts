@@ -10,6 +10,8 @@ import { KapitalBankError } from "../errors/KapitalBankError";
 import {
   KapitalBankRequestOptions,
 } from "../types/request";
+import { retryWithBackoff, RetryOptions } from "../utils/retry";
+import { MonitoringService, MetricData } from "../services/monitoring.service";
 
 export class KapitalBankClient {
   private readonly axiosInstance: AxiosInstance;
@@ -21,6 +23,8 @@ export class KapitalBankClient {
   > & {
     logEnabled: boolean;
   };
+  private readonly retryOptions?: RetryOptions;
+  private readonly monitoringService: MonitoringService;
 
   constructor(config: KapitalBankClientConfig) {
     this.config = {
@@ -29,6 +33,28 @@ export class KapitalBankClient {
       logEnabled: false,
       ...config,
     };
+
+    const { retry, ...clientConfig } = config;
+    this.retryOptions = retry;
+
+    if (retry) {
+      if (retry.maxAttempts !== undefined) {
+        if (retry.maxAttempts <= 0 || retry.maxAttempts > 10) {
+          throw new Error("retry.maxAttempts must be between 1 and 10");
+        }
+      }
+      if (retry.initialDelay !== undefined && retry.initialDelay < 0) {
+        throw new Error("retry.initialDelay must be non-negative");
+      }
+      if (retry.maxDelay !== undefined && retry.maxDelay < 0) {
+        throw new Error("retry.maxDelay must be non-negative");
+      }
+      if (retry.backoffMultiplier !== undefined && retry.backoffMultiplier <= 1) {
+        throw new Error("retry.backoffMultiplier must be greater than 1");
+      }
+    }
+
+    this.monitoringService = new MonitoringService();
 
     const baseURL = ENVIRONMENTS[this.config.environment];
 
@@ -76,34 +102,71 @@ export class KapitalBankClient {
     return this.axiosInstance;
   }
 
+  public getMonitoringService() {
+    return this.monitoringService;
+  }
+
   async request<T>(
     method: Method,
     path: string,
     body?: unknown,
     options: KapitalBankRequestOptions = {}
   ): Promise<T> {
-    try {
-      const response =
-        await this.axiosInstance.request<T>({
-          method,
-          url: path,
-          data: body,
-          params: options.params,
-          headers: options.headers,
+    const startTime = Date.now();
+    const makeRequest = async (): Promise<T> => {
+      try {
+        const response =
+          await this.axiosInstance.request<T>({
+            method,
+            url: path,
+            data: body,
+            params: options.params,
+            headers: options.headers,
+          });
+
+        const latency = Date.now() - startTime;
+
+        this.monitoringService.recordMetric({
+          timestamp: new Date().toISOString(),
+          method: method.toUpperCase(),
+          endpoint: path,
+          status: "success",
+          latency,
+          statusCode: response.status,
         });
 
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new KapitalBankError(
-          error.response?.data?.message ??
-            error.message,
-          error.response?.status,
-          error.response?.data
-        );
-      }
+        return response.data;
+      } catch (error) {
+        const latency = Date.now() - startTime;
 
-      throw error;
+        this.monitoringService.recordMetric({
+          timestamp: new Date().toISOString(),
+          method: method.toUpperCase(),
+          endpoint: path,
+          status: "error",
+          latency,
+          statusCode: axios.isAxiosError(error) ? error.response?.status : undefined,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+
+        if (axios.isAxiosError(error)) {
+          throw new KapitalBankError(
+            error.response?.data?.message ??
+              error.message,
+            error.response?.status,
+            error.response?.data
+          );
+        }
+
+        throw error;
+      }
+    };
+
+    if (this.retryOptions) {
+      const result = await retryWithBackoff(makeRequest, this.retryOptions);
+      return result.data;
     }
+
+    return makeRequest();
   }
 }

@@ -10,11 +10,9 @@ async function main() {
 
   console.log("=== Google Pay Full Flow Example ===\n");
 
-  // Display gateway configuration
   console.log("Google Pay gateway config:", GOOGLE_PAY_GATEWAY);
   console.log();
 
-  // Step 1: Create Google Pay order
   console.log("Step 1: Creating Google Pay order...");
   const order = await kb.createGooglePayOrder({
     amount: "10",
@@ -27,7 +25,6 @@ async function main() {
   console.log("  Password:", order.password);
   console.log();
 
-  // Step 2: Get Google Pay token from frontend (simulated with env var)
   console.log("Step 2: Getting Google Pay token from frontend...");
   const googlePayTokenJson = process.env.GOOGLE_PAY_TOKEN_JSON;
 
@@ -46,13 +43,11 @@ async function main() {
   console.log("✓ Token received from frontend");
   console.log();
 
-  // Step 3: Encode token to HEX
   console.log("Step 3: Encoding token to HEX...");
   const googlePayBlock = encodeGooglePayToken(googlePayTokenJson);
   console.log("✓ Token encoded to HEX");
   console.log();
 
-  // Step 4: Set Google Pay token on order
   console.log("Step 4: Setting Google Pay token on order...");
   await kb.setGooglePayToken(order.id, order.password, {
     googlePayBlock,
@@ -60,7 +55,6 @@ async function main() {
   console.log("✓ Token set on order");
   console.log();
 
-  // Step 5: Execute transaction
   console.log("Step 5: Executing transaction...");
   const transaction = await kb.executeTransaction(order.id, {
     phase: "Single",
@@ -70,7 +64,6 @@ async function main() {
   console.log("  Result Code:", transaction.pmoResultCode);
   console.log();
 
-  // Step 6: Wait for payment completion
   console.log("Step 6: Waiting for payment completion...");
   const result = await kb.waitForPayment(order.id, {
     password: order.password,

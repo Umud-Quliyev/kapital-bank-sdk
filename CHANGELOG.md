@@ -5,6 +5,86 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-06-10
+
+### Added
+
+- **Webhook Handler** - Handle webhooks from Kapital Bank with signature verification
+  - HMAC-SHA256 signature verification with timing-safe comparison
+  - IP filtering (denies by default for security)
+  - Password-based order verification (recommended over orderId)
+  - JSON parsing with error handling
+  - `verifyWebhookSignature()`, `verifyWebhookIp()`, `parseWebhookPayload()`, `handleWebhook()`
+  - `WebhookConfig`, `WebhookPayload`, `WebhookHandlerOptions`, `WebhookVerificationResult` types
+
+- **Notification Services** - Automatic notifications to Telegram and Discord
+  - Telegram bot integration with custom message templates
+  - Discord webhook integration with embed formatting
+  - Custom message templates with `{orderId}`, `{amount}`, `{currency}`, `{status}`, `{timestamp}` placeholders
+  - Event toggles to prevent notification spam (disable non-terminal events by default)
+  - `TelegramService` and `DiscordService` with payment event methods
+  - `TelegramConfig`, `DiscordConfig`, `NotificationMessageTemplates`, `NotificationEventToggle` types
+
+- **Retry System** - Automatic retry with exponential backoff
+  - Configurable retry options (maxAttempts, initialDelay, maxDelay, backoffMultiplier)
+  - Retryable errors filtering
+  - Validation to prevent API abuse (max 10 attempts, backoffMultiplier > 1)
+  - `retryWithBackoff()` utility function
+  - `RetryOptions`, `RetryResult` types
+
+- **Health Check** - API health monitoring
+  - Basic health check with latency tracking
+  - Timeout-based health check
+  - `healthCheck()`, `healthCheckWithTimeout()` methods
+  - `HealthCheckResult` type
+
+- **Better Monitoring** - API performance metrics
+  - Metrics tracking (total requests, success rate, error rate, average latency)
+  - P95/P99 latency percentiles
+  - Endpoint-specific metrics
+  - `getMonitoringMetrics()`, `clearMonitoringMetrics()` methods
+  - `MonitoringService`, `MetricData`, `MonitoringMetrics` types
+
+- **Environment Configuration** - Extended env parsing
+  - Webhook config parsing (secret, path, allowedIps)
+  - Telegram config parsing (botToken, chatId, parseMode, customMessages, enabledEvents)
+  - Discord config parsing (webhookUrl, username, avatarUrl, customMessages, enabledEvents)
+  - Retry config parsing with validation
+  - New environment variables for all new features
+
+- **Examples** - 7 new example files
+  - `webhook-handler.ts` - Webhook handling example
+  - `telegram-notifications.ts` - Telegram notifications example
+  - `discord-notifications.ts` - Discord notifications example
+  - `retry-system.ts` - Retry configuration example
+  - `health-check.ts` - Health check example
+  - `monitoring.ts` - Metrics tracking example
+  - `test-new-features.ts` - Feature testing script
+  - `test-security-fixes.ts` - Security validation script
+
+### Security Improvements
+
+- Webhook IP validation now denies by default (was allow-all)
+- Retry configuration validated to prevent API abuse (max 10 attempts)
+- Notification event toggles prevent spam by disabling non-terminal events
+- Webhook password handling improved (supports explicit password field)
+- All sensitive credentials must use environment variables
+
+### Changed
+
+- README updated with Production Guides section
+- README updated with Security Notes for webhook, notifications, and retry
+- `.env.example` updated with all new environment variables
+- SDK features list updated with new capabilities
+- Roadmap updated (Webhook/Event Integrations completed)
+
+### Fixed
+
+- Webhook IP validation bypass (now denies by default)
+- Retry infinite loop risk (validation added)
+- Notification spam (event toggles added)
+- Webhook password security (explicit password support)
+
 ## [1.3.0] - 2026-06-09
 
 ### Added

@@ -17,11 +17,34 @@ import { PreAuthService } from "./services/preauth.service";
 import { ClearingService } from "./services/clearing.service";
 import { PaymentMonitorService } from "./services/payment-monitor.service";
 import { GooglePayService } from "./services/google-pay.service";
+import { WebhookService } from "./services/webhook.service";
+import { TelegramService } from "./services/telegram.service";
+import { DiscordService } from "./services/discord.service";
+import { HealthService } from "./services/health.service";
+import { MonitoringService, MonitoringMetrics } from "./services/monitoring.service";
 
 import {
   TransferToCardRequest,
   TransferToCardResponse,
 } from "./types/transfer";
+
+import {
+  WebhookConfig,
+  WebhookHandlerOptions,
+  WebhookPayload,
+  WebhookVerificationResult,
+} from "./types/webhook";
+
+import { WebhookPayloadExtended } from "./services/webhook.service";
+
+import {
+  TelegramConfig,
+  DiscordConfig,
+} from "./types/notification";
+
+import {
+  HealthCheckResult,
+} from "./services/health.service";
 
 import {
   SetDestinationTokenRequest,
@@ -144,6 +167,10 @@ export class KapitalBank extends EventEmitter {
   private readonly clearingService: ClearingService;
   private readonly paymentMonitorService: PaymentMonitorService;
   private readonly googlePayService: GooglePayService;
+  private readonly webhookService: WebhookService;
+  private readonly telegramService?: TelegramService;
+  private readonly discordService?: DiscordService;
+  private readonly healthService: HealthService;
 
   constructor(config: KapitalBankConfig) {
     super();
@@ -151,6 +178,10 @@ export class KapitalBank extends EventEmitter {
     const {
       defaults,
       logEnabled,
+      webhook,
+      telegram,
+      discord,
+      retry,
       ...clientConfig
     } = config;
 
@@ -159,6 +190,7 @@ export class KapitalBank extends EventEmitter {
     this.client = new KapitalBankClient({
       ...clientConfig,
       logEnabled: logEnabled ?? false,
+      retry,
     });
 
     this.ordersService = new OrdersService(this.client);
@@ -176,6 +208,13 @@ export class KapitalBank extends EventEmitter {
       this.client,
       this.orderDefaults
     );
+    this.webhookService = new WebhookService(
+      this.client,
+      webhook ?? {}
+    );
+    this.telegramService = telegram ? new TelegramService(telegram) : undefined;
+    this.discordService = discord ? new DiscordService(discord) : undefined;
+    this.healthService = new HealthService(this.client);
   }
 
   static fromEnv(
@@ -459,6 +498,60 @@ export class KapitalBank extends EventEmitter {
     };
   }
 
+  verifyWebhookSignature(
+    payload: string,
+    signature: string,
+    secret: string
+  ): WebhookVerificationResult {
+    return this.webhookService.verifySignature(
+      payload,
+      signature,
+      secret
+    );
+  }
+
+  async handleWebhook(
+    payload: WebhookPayloadExtended,
+    options: WebhookHandlerOptions
+  ): Promise<void> {
+    return this.webhookService.handleWebhook(
+      payload,
+      options
+    );
+  }
+
+  verifyWebhookIp(ip: string): boolean {
+    return this.webhookService.verifyIp(ip);
+  }
+
+  parseWebhookPayload(rawBody: string): WebhookPayload {
+    return this.webhookService.parsePayload(rawBody);
+  }
+
+  getTelegramService(): TelegramService | undefined {
+    return this.telegramService;
+  }
+
+  getDiscordService(): DiscordService | undefined {
+    return this.discordService;
+  }
+
+  async healthCheck(): Promise<HealthCheckResult> {
+    return this.healthService.check();
+  }
+
+  async healthCheckWithTimeout(timeoutMs: number = 5000): Promise<HealthCheckResult> {
+    return this.healthService.checkWithTimeout(timeoutMs);
+  }
+
+  getMonitoringMetrics(): MonitoringMetrics {
+    return this.client.getMonitoringService().getMetrics();
+  }
+
+  clearMonitoringMetrics(): void {
+    return this.client.getMonitoringService().clearMetrics();
+  }
+
   private emitPaymentEvents(
     order: OrderDetails
   ): void {
@@ -467,18 +560,28 @@ export class KapitalBank extends EventEmitter {
     switch (order.status) {
       case "FullyPaid":
         this.emit("payment:paid", order);
+        this.telegramService?.sendPaymentPaid(order);
+        this.discordService?.sendPaymentPaid(order);
         break;
       case "Declined":
         this.emit("payment:declined", order);
+        this.telegramService?.sendPaymentDeclined(order);
+        this.discordService?.sendPaymentDeclined(order);
         break;
       case "Expired":
         this.emit("payment:expired", order);
+        this.telegramService?.sendPaymentExpired(order);
+        this.discordService?.sendPaymentExpired(order);
         break;
       case "Refunded":
         this.emit("payment:refunded", order);
+        this.telegramService?.sendPaymentRefunded(order);
+        this.discordService?.sendPaymentRefunded(order);
         break;
       case "Reversed":
         this.emit("payment:reversed", order);
+        this.telegramService?.sendPaymentReversed(order);
+        this.discordService?.sendPaymentReversed(order);
         break;
     }
   }
